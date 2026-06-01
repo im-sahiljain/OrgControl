@@ -6,6 +6,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import AddEmployees from "../components/AddEmployees";
 import ShowEmployess from "../components/ShowEmployess";
+import ManageModules from "../components/ManageModules";
+import ManagePositions from "../components/ManagePositions";
 import { setSearchFilter } from "../reduxToolkit/slice";
 import type { RootState } from "../reduxToolkit/store";
 import { 
@@ -19,8 +21,8 @@ import {
   Settings2, 
   Trash2, 
   Plus, 
-  CheckCircle2, 
-  LayoutGrid 
+  LayoutGrid,
+  Briefcase
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +32,7 @@ export default function EmployeesPage() {
   const queryClient = useQueryClient();
   const searchFilter = useSelector((state: RootState) => state.employeeUI.searchFilter);
 
-  const [activeTab, setActiveTab] = useState<"employees" | "departments" | "configurator">("employees");
+  const [activeTab, setActiveTab] = useState<"employees" | "departments" | "configurator" | "modules" | "positions">("employees");
 
   // New Department Form States
   const [deptName, setDeptName] = useState<string>("");
@@ -58,6 +60,15 @@ export default function EmployeesPage() {
     queryKey: ["departments"],
     queryFn: async () => {
       const res = await axios.get("/api/departments");
+      return res.data.data || [];
+    },
+  });
+
+  // Fetch dynamic modules list
+  const { data: modulesList } = useQuery({
+    queryKey: ["modules"],
+    queryFn: async () => {
+      const res = await axios.get("/api/modules");
       return res.data.data || [];
     },
   });
@@ -179,12 +190,7 @@ export default function EmployeesPage() {
     }
   };
 
-  const widgetsList = [
-    { id: "sprint_tracker", label: "Engineering Sprint Board", desc: "Uptimes, active branches, trigger build simulator." },
-    { id: "sales_pipeline", label: "Sales CRM Pipeline Funnel", desc: "CRM opportunities log form, representative leaderboard." },
-    { id: "treasury_ledger", label: "Finance Treasury Reimbursements", desc: "Cost center lists, log expenses claims directly." },
-    { id: "recruitment_funnel", label: "HR Recruitment Onboarding", desc: "Candidate interview scheduler, pulse sentiment boards." },
-  ];
+  // widgetsList is now replaced by the dynamic modulesList from the API.
 
   return (
     <div className="space-y-6">
@@ -247,6 +253,28 @@ export default function EmployeesPage() {
         >
           <Settings2 className="h-4 w-4" />
           Dashboard Configurator
+        </button>
+        <button
+          onClick={() => setActiveTab("modules")}
+          className={`pb-3 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 ${
+            activeTab === "modules"
+              ? "border-blue-600 text-blue-600"
+              : "border-transparent text-zinc-505 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100"
+          }`}
+        >
+          <LayoutGrid className="h-4 w-4" />
+          Manage Modules
+        </button>
+        <button
+          onClick={() => setActiveTab("positions")}
+          className={`pb-3 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 ${
+            activeTab === "positions"
+              ? "border-blue-600 text-blue-600"
+              : "border-transparent text-zinc-505 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100"
+          }`}
+        >
+          <Briefcase className="h-4 w-4" />
+          Manage Positions
         </button>
       </div>
 
@@ -466,34 +494,40 @@ export default function EmployeesPage() {
                 Enable Dashboard Modules
               </h4>
               <div className="space-y-3">
-                {widgetsList.map((w) => {
-                  const isChecked = configWidgets.includes(w.id);
-                  return (
-                    <label
-                      key={w.id}
-                      className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
-                        isChecked
-                          ? "bg-blue-50/20 border-blue-200 dark:border-blue-900/50"
-                          : "border-zinc-100 dark:border-zinc-850 bg-white dark:bg-zinc-900 hover:bg-zinc-50"
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => handleToggleWidget(w.id)}
-                        className="mt-1 h-4 w-4 text-blue-600 border-zinc-300 focus:ring-blue-500 rounded cursor-pointer shrink-0"
-                      />
-                      <div className="space-y-0.5">
-                        <span className="text-sm font-semibold block text-zinc-900 dark:text-zinc-100">
-                          {w.label}
-                        </span>
-                        <span className="text-xxs text-zinc-400 font-medium block leading-relaxed">
-                          {w.desc}
-                        </span>
-                      </div>
-                    </label>
-                  );
-                })}
+                {modulesList && modulesList.length > 0 ? (
+                  modulesList.map((w: any) => {
+                    const isChecked = configWidgets.includes(w._id || w.id);
+                    return (
+                      <label
+                        key={w._id || w.id}
+                        className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                          isChecked
+                            ? "bg-blue-50/20 border-blue-200 dark:border-blue-900/50"
+                            : "border-zinc-100 dark:border-zinc-850 bg-white dark:bg-zinc-900 hover:bg-zinc-50"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => handleToggleWidget(w._id || w.id)}
+                          className="mt-1 h-4 w-4 text-blue-600 border-zinc-300 focus:ring-blue-500 rounded cursor-pointer shrink-0"
+                        />
+                        <div className="space-y-0.5">
+                          <span className="text-sm font-semibold block text-zinc-900 dark:text-zinc-100">
+                            {w.name}
+                          </span>
+                          <span className="text-xxs text-zinc-400 font-medium block leading-relaxed">
+                            {w.description}
+                          </span>
+                        </div>
+                      </label>
+                    );
+                  })
+                ) : (
+                  <div className="text-xs text-zinc-500 italic p-4 text-center border rounded-lg bg-zinc-50/50">
+                    No modules available. Go to "Manage Modules" to create some!
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -659,6 +693,14 @@ export default function EmployeesPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {activeTab === "modules" && (
+        <ManageModules />
+      )}
+
+      {activeTab === "positions" && (
+        <ManagePositions />
       )}
     </div>
   );

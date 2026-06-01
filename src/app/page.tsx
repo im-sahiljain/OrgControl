@@ -27,6 +27,7 @@ import {
 import type { RootState } from "./reduxToolkit/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import DynamicModuleCard from "./components/DynamicModuleCard";
 
 export default function Dashboard() {
   const user = useSelector((state: RootState) => state.employeeUI.user);
@@ -36,6 +37,15 @@ export default function Dashboard() {
     queryKey: ["employees"],
     queryFn: async () => {
       const res = await axios.get("/api/employees");
+      return res.data.data || [];
+    },
+  });
+
+  // Fetch dynamic modules
+  const { data: modulesList } = useQuery({
+    queryKey: ["modules"],
+    queryFn: async () => {
+      const res = await axios.get("/api/modules");
       return res.data.data || [];
     },
   });
@@ -171,297 +181,6 @@ export default function Dashboard() {
     }
 
     return "Staff / Contributor";
-  };
-
-  // ----------------------------------------------------
-  // DYNAMIC WIDGET RENDER ROUTER
-  // ----------------------------------------------------
-  const renderWidget = (widgetId: string, hierarchyLabel: string, isLead: boolean) => {
-    switch (widgetId) {
-      case "sprint_tracker":
-        return (
-          <div key={widgetId} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm space-y-4 animate-fade-in">
-            <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
-              <h3 className="text-base font-bold flex items-center gap-2">
-                <Terminal className="h-5 w-5 text-blue-600" />
-                Engineering Sprint Board & CI/CD
-              </h3>
-              <span className="text-xxs px-2.5 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-bold rounded-full">
-                Active Branch: main
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-semibold text-zinc-500">
-              <div className="p-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-850 rounded-lg">
-                <span className="block text-zinc-400 font-bold mb-1">Server Status:</span>
-                <span className="text-sm font-bold text-emerald-600 flex items-center gap-1">
-                  <Activity className="h-3.5 w-3.5 animate-pulse" /> 99.98% Uptime
-                </span>
-              </div>
-              <div className="p-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-850 rounded-lg">
-                <span className="block text-zinc-400 font-bold mb-1">Code Quality:</span>
-                <span className="text-sm font-bold text-blue-600">A+ (TS Compiles)</span>
-              </div>
-              <div className="p-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-850 rounded-lg">
-                <span className="block text-zinc-400 font-bold mb-1">Pending PRs:</span>
-                <span className="text-sm font-bold text-amber-500">3 Reviews Open</span>
-              </div>
-              <div className="p-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-850 rounded-lg">
-                <span className="block text-zinc-400 font-bold mb-1">Sprint Velocity:</span>
-                <span className="text-sm font-bold text-zinc-850 dark:text-zinc-100">42 Story Points</span>
-              </div>
-            </div>
-
-            {/* Simulated Build Sandbox */}
-            <div className="space-y-3 bg-zinc-950 dark:bg-black rounded-lg p-4 border border-zinc-800 text-zinc-300 font-mono text-xs">
-              <div className="flex items-center justify-between">
-                <span className="text-zinc-400 font-bold">Edge Build Console Logs</span>
-                <Button
-                  onClick={handleTriggerBuild}
-                  disabled={isBuilding}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xxs h-7 px-3"
-                >
-                  {isBuilding ? "Compiling..." : "Trigger Production Build"}
-                </Button>
-              </div>
-              <div className="max-h-32 overflow-y-auto space-y-1.5 scrollbar-thin scrollbar-thumb-zinc-800">
-                {buildLogs.length > 0 ? (
-                  buildLogs.map((log, idx) => <div key={idx}>{log}</div>)
-                ) : (
-                  <div className="text-zinc-600">Terminal idle. Click "Trigger Production Build" to simulate compilation logs...</div>
-                )}
-              </div>
-            </div>
-
-            {isLead && (
-              <div className="bg-indigo-50/30 dark:bg-indigo-900/10 p-3 rounded-lg border border-indigo-100/30 text-xs font-semibold text-indigo-700 dark:text-indigo-300 flex justify-between items-center">
-                <span>VP/Manager Dashboard Action: Approve technical debt sprint tickets</span>
-                <Button className="bg-indigo-600 hover:bg-indigo-700 text-white text-xxs h-7">Approve Merge</Button>
-              </div>
-            )}
-          </div>
-        );
-
-      case "sales_pipeline":
-        const totalPipelineSum = salesOpportunities.reduce((acc, curr) => acc + curr.amount, 0);
-        return (
-          <div key={widgetId} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm space-y-4 animate-fade-in">
-            <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
-              <h3 className="text-base font-bold flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-blue-600" />
-                Sales CRM Pipeline Funnel
-              </h3>
-              <span className="text-xxs px-2.5 py-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 font-bold rounded-full">
-                Pipeline Value: ₹{totalPipelineSum.toLocaleString()}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Opportunities Form Input */}
-              <div className="md:col-span-1 border border-zinc-150 dark:border-zinc-800 rounded-xl p-4 bg-zinc-50/50 space-y-3">
-                <h4 className="text-xs font-bold text-zinc-500">Log New CRM Opportunity</h4>
-                <div className="space-y-2">
-                  <Input
-                    placeholder="Client Account Name"
-                    value={clientName}
-                    onChange={(e) => setClientName(e.target.value)}
-                    className="h-8 text-xs bg-white"
-                  />
-                  <Input
-                    placeholder="Deal Amount (INR)"
-                    type="number"
-                    value={dealAmount}
-                    onChange={(e) => setDealAmount(e.target.value)}
-                    className="h-8 text-xs bg-white"
-                  />
-                  <select
-                    value={dealStage}
-                    onChange={(e) => setDealStage(e.target.value)}
-                    className="w-full h-8 px-2.5 border border-zinc-200 rounded-lg text-xs focus:outline-none bg-white font-medium"
-                  >
-                    <option value="Prospecting">Prospecting</option>
-                    <option value="Proposal">Proposal</option>
-                    <option value="Closed Won">Closed Won</option>
-                  </select>
-                  <Button onClick={handleAddOpportunity} className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs h-8">
-                    Add Opportunity Deal
-                  </Button>
-                </div>
-              </div>
-
-              {/* Roster Pipeline Cards */}
-              <div className="md:col-span-2 space-y-3">
-                <h4 className="text-xs font-bold text-zinc-400 block">Deal Funnel opportunity logs</h4>
-                <div className="max-h-48 overflow-y-auto space-y-2 pr-1.5 scrollbar-thin">
-                  {salesOpportunities.map((op, idx) => (
-                    <div key={idx} className="flex justify-between items-center p-3 border border-zinc-100 dark:border-zinc-850 bg-white dark:bg-zinc-950 rounded-xl text-xs">
-                      <div>
-                        <span className="font-bold block text-zinc-900 dark:text-zinc-100">{op.client}</span>
-                        <span className={`text-xxs font-bold uppercase ${
-                          op.stage === "Closed Won" ? "text-emerald-500" : (op.stage === "Proposal" ? "text-amber-500" : "text-blue-500")
-                        }`}>{op.stage}</span>
-                      </div>
-                      <span className="font-mono font-bold text-zinc-850 dark:text-zinc-100">₹{op.amount.toLocaleString()}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {isLead && (
-              <div className="bg-amber-50/30 dark:bg-amber-900/10 p-3 rounded-lg border border-amber-100/30 text-xs font-semibold text-amber-700 dark:text-amber-300 flex justify-between items-center">
-                <span>VP/Manager Dashboard Action: Set regional commission threshold goals</span>
-                <Button className="bg-amber-600 hover:bg-amber-700 text-white text-xxs h-7">Adjust Quotas</Button>
-              </div>
-            )}
-          </div>
-        );
-
-      case "treasury_ledger":
-        const totalExpensesSum = expensesClaims.reduce((acc, curr) => acc + curr.amount, 0);
-        const treasuryPool = 3400000 - totalExpensesSum;
-        return (
-          <div key={widgetId} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm space-y-4 animate-fade-in">
-            <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
-              <h3 className="text-base font-bold flex items-center gap-2">
-                <Coins className="h-5 w-5 text-blue-600" />
-                Finance Treasury & Expense Ledger
-              </h3>
-              <span className="text-xxs px-2.5 py-1 bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 font-bold rounded-full">
-                Treasury Reserve: ₹{treasuryPool.toLocaleString()}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Expense Claim Form */}
-              <div className="md:col-span-1 border border-zinc-150 dark:border-zinc-800 rounded-xl p-4 bg-zinc-50/50 space-y-3">
-                <h4 className="text-xs font-bold text-zinc-500">Post Operational Expense</h4>
-                <div className="space-y-2">
-                  <Input
-                    placeholder="Expense Title"
-                    value={expenseTitle}
-                    onChange={(e) => setExpenseTitle(e.target.value)}
-                    className="h-8 text-xs bg-white"
-                  />
-                  <Input
-                    placeholder="Amount (INR)"
-                    type="number"
-                    value={expenseAmount}
-                    onChange={(e) => setExpenseAmount(e.target.value)}
-                    className="h-8 text-xs bg-white"
-                  />
-                  <select
-                    value={expenseCategory}
-                    onChange={(e) => setExpenseCategory(e.target.value)}
-                    className="w-full h-8 px-2.5 border border-zinc-200 rounded-lg text-xs focus:outline-none bg-white font-medium"
-                  >
-                    <option value="Operations">Operations</option>
-                    <option value="Infrastructure">Infrastructure</option>
-                    <option value="Travel">Travel</option>
-                  </select>
-                  <Button onClick={handleAddExpense} className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs h-8">
-                    Submit Expense Claim
-                  </Button>
-                </div>
-              </div>
-
-              {/* Expense Ledger Logs */}
-              <div className="md:col-span-2 space-y-3">
-                <h4 className="text-xs font-bold text-zinc-400 block">Active Cost Center Ledger</h4>
-                <div className="max-h-48 overflow-y-auto space-y-2 pr-1.5 scrollbar-thin">
-                  {expensesClaims.map((ex, idx) => (
-                    <div key={idx} className="flex justify-between items-center p-3 border border-zinc-100 dark:border-zinc-850 bg-white dark:bg-zinc-950 rounded-xl text-xs">
-                      <div>
-                        <span className="font-bold block text-zinc-900 dark:text-zinc-100">{ex.title}</span>
-                        <span className="text-xxs font-bold text-zinc-400 uppercase tracking-wider">{ex.category}</span>
-                      </div>
-                      <span className="font-mono font-bold text-red-500">-₹{ex.amount.toLocaleString()}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {isLead && (
-              <div className="bg-rose-50/30 dark:bg-rose-900/10 p-3 rounded-lg border border-rose-100/30 text-xs font-semibold text-rose-700 dark:text-rose-300 flex justify-between items-center">
-                <span>VP/Manager Dashboard Action: Authorize pending treasury disbursements</span>
-                <Button className="bg-rose-600 hover:bg-rose-700 text-white text-xxs h-7">Approve Payout</Button>
-              </div>
-            )}
-          </div>
-        );
-
-      case "recruitment_funnel":
-        return (
-          <div key={widgetId} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm space-y-4 animate-fade-in">
-            <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
-              <h3 className="text-base font-bold flex items-center gap-2">
-                <CalendarCheck2 className="h-5 w-5 text-blue-600" />
-                HR Recruitment & Onboarding Funnel
-              </h3>
-              <span className="text-xxs px-2.5 py-1 bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 font-bold rounded-full">
-                Sentiment: 88% Positive
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Interview Form */}
-              <div className="md:col-span-1 border border-zinc-150 dark:border-zinc-800 rounded-xl p-4 bg-zinc-50/50 space-y-3">
-                <h4 className="text-xs font-bold text-zinc-500">Schedule Candidate Interview</h4>
-                <div className="space-y-2">
-                  <Input
-                    placeholder="Candidate Full Name"
-                    value={candidateName}
-                    onChange={(e) => setCandidateName(e.target.value)}
-                    className="h-8 text-xs bg-white"
-                  />
-                  <Input
-                    placeholder="Target Job Position"
-                    value={jobPosition}
-                    onChange={(e) => setJobPosition(e.target.value)}
-                    className="h-8 text-xs bg-white"
-                  />
-                  <Input
-                    placeholder="Date (e.g. June 10)"
-                    value={interviewDate}
-                    onChange={(e) => setInterviewDate(e.target.value)}
-                    className="h-8 text-xs bg-white"
-                  />
-                  <Button onClick={handleAddInterview} className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs h-8">
-                    Schedule Interview
-                  </Button>
-                </div>
-              </div>
-
-              {/* Recruitment Lists */}
-              <div className="md:col-span-2 space-y-3">
-                <h4 className="text-xs font-bold text-zinc-400 block">Candidate Interview pipeline</h4>
-                <div className="max-h-48 overflow-y-auto space-y-2 pr-1.5 scrollbar-thin">
-                  {interviews.map((int, idx) => (
-                    <div key={idx} className="flex justify-between items-center p-3 border border-zinc-100 dark:border-zinc-850 bg-white dark:bg-zinc-950 rounded-xl text-xs">
-                      <div>
-                        <span className="font-bold block text-zinc-900 dark:text-zinc-100">{int.candidate}</span>
-                        <span className="text-xxs font-bold text-zinc-400 uppercase tracking-wider">{int.position}</span>
-                      </div>
-                      <span className="font-semibold text-zinc-700 dark:text-zinc-300 font-mono">{int.date}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {isLead && (
-              <div className="bg-indigo-50/30 dark:bg-indigo-900/10 p-3 rounded-lg border border-indigo-100/30 text-xs font-semibold text-indigo-700 dark:text-indigo-300 flex justify-between items-center">
-                <span>VP/Manager Dashboard Action: Approve candidates formal employment offers</span>
-                <Button className="bg-indigo-600 hover:bg-indigo-700 text-white text-xxs h-7">Approve Offer</Button>
-              </div>
-            )}
-          </div>
-        );
-
-      default:
-        return null;
-    }
   };
 
   // ----------------------------------------------------
@@ -669,7 +388,18 @@ export default function Dashboard() {
               {/* Dynamic Mounted Widgets Render */}
               {activePreviewDept.enabledWidgets && activePreviewDept.enabledWidgets.length > 0 ? (
                 <div className="space-y-6">
-                  {activePreviewDept.enabledWidgets.map((w: string) => renderWidget(w, "Preview Mode (Lead Elevated)", true))}
+                  {activePreviewDept.enabledWidgets.map((widgetId: string) => {
+                    const modDef = modulesList?.find((m: any) => m._id === widgetId || m.id === widgetId);
+                    if (!modDef) return null;
+                    return (
+                      <DynamicModuleCard
+                        key={widgetId}
+                        moduleDef={modDef}
+                        hierarchyLabel="Preview Mode (Lead Elevated)"
+                        isLead={true}
+                      />
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-16 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl bg-white text-zinc-400 text-xs">
@@ -720,7 +450,18 @@ export default function Dashboard() {
         {/* Dynamic Mounted Widgets Render */}
         {userDept?.enabledWidgets && userDept.enabledWidgets.length > 0 ? (
           <div className="space-y-6">
-            {userDept.enabledWidgets.map((widgetId: string) => renderWidget(widgetId, hierarchyLabel, isLead))}
+            {userDept.enabledWidgets.map((widgetId: string) => {
+              const modDef = modulesList?.find((m: any) => m._id === widgetId || m.id === widgetId);
+              if (!modDef) return null;
+              return (
+                <DynamicModuleCard
+                  key={widgetId}
+                  moduleDef={modDef}
+                  hierarchyLabel={hierarchyLabel}
+                  isLead={isLead}
+                />
+              );
+            })}
           </div>
         ) : (
           <div className="text-center py-20 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900 text-zinc-400 text-xs">

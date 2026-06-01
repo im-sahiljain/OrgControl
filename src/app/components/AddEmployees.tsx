@@ -29,6 +29,15 @@ const AddEmployees = () => {
     },
   });
 
+  // Fetch job positions dynamically
+  const { data: positions } = useQuery({
+    queryKey: ["positions"],
+    queryFn: async () => {
+      const res = await axios.get("/api/positions");
+      return res.data.data || [];
+    },
+  });
+
   // Cloudinary image upload simulation mutation
   const uploadImageMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -149,13 +158,18 @@ const AddEmployees = () => {
             <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
               Position <span className="text-red-500">*</span>
             </label>
-            <Input
-              type="text"
-              placeholder="Position"
-              className="w-full"
-              onChange={(e) => setEmpPosition(e.target.value)}
+            <select
               value={empPosition}
-            />
+              onChange={(e) => setEmpPosition(e.target.value)}
+              className="w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-zinc-800 dark:text-zinc-100 h-[38px]"
+            >
+              <option value="" disabled>-- Select Formal Position --</option>
+              {positions?.map((p: any) => (
+                <option key={p._id || p.id} value={p.title}>
+                  {p.title} {p.department !== "Unassigned" ? `(${p.department})` : ""}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 

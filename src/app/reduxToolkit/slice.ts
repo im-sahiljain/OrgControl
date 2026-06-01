@@ -38,17 +38,9 @@ export const initialUIState: EmployeeUIState = {
   isDetailsOpen: false,
   searchFilter: "",
   
-  // Default to authenticated Organization Admin for smooth initial loading
-  isAuthenticated: true,
-  user: {
-    id: "user_admin_1",
-    name: "Sahil",
-    email: "admin@company.in",
-    role: "org_admin",
-    orgId: "org_default",
-    department: "Human Resources",
-    position: "CHRO (Head of HR)",
-  },
+  // Default to unauthenticated — users must select a profile on the login page
+  isAuthenticated: false,
+  user: null,
 };
 
 export const employeeUISlice = createSlice({

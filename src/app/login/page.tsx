@@ -12,16 +12,7 @@ export default function LoginPage() {
   const dispatch = useDispatch();
   const router = useRouter();
   const isAuthenticated = useSelector((state: RootState) => state.employeeUI.isAuthenticated);
-
   const presets = [
-    {
-      role: "platform_admin" as const,
-      name: "SaaS Maker (Platform Owner)",
-      email: "owner@saasmaker.in",
-      desc: "Access global MRR analytics, database Connection pools, and Tenant organization suspension gates.",
-      icon: Cpu,
-      color: "border-sky-200 dark:border-sky-900 bg-sky-50/40 dark:bg-sky-950/20 text-sky-600 dark:text-sky-400",
-    },
     {
       role: "org_admin" as const,
       name: "Sahil (CHRO / HR Admin)",
@@ -62,6 +53,14 @@ export default function LoginPage() {
       department: "Finance",
       position: "CFO (Head)",
     },
+    {
+      role: "platform_admin" as const,
+      name: "SaaS Maker (Platform Owner)",
+      email: "owner@saasmaker.in",
+      desc: "Access global MRR analytics, database Connection pools, and Tenant organization suspension gates.",
+      icon: Cpu,
+      color: "border-sky-200 dark:border-sky-900 bg-sky-50/40 dark:bg-sky-950/20 text-sky-600 dark:text-sky-400",
+    },
   ];
 
   const handleLogin = (preset: typeof presets[number]) => {
@@ -81,25 +80,27 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col justify-center items-center p-4">
-      <div className="w-full max-w-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xl p-8 space-y-6">
+      <div className="w-full max-w-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xl p-8 space-y-6">
         <div className="text-center space-y-2">
           <div className="h-12 w-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold text-2xl mx-auto shadow-md">
-            R
+            O
           </div>
           <h1 className="text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
-            SaaS Workspace Authentication
+            Org Control
           </h1>
           <p className="text-sm text-zinc-505">
             Select a simulation profile card below to sign in instantly with specialized permissions.
           </p>
         </div>
 
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {presets.map((preset) => (
             <div
-              key={preset.role}
+              key={preset.email}
               onClick={() => handleLogin(preset)}
-              className={`p-4 rounded-xl border border-dashed hover:border-solid hover:shadow-md cursor-pointer transition-all flex items-start gap-4 ${preset.color}`}
+              className={`p-4 rounded-xl border border-dashed hover:border-solid hover:shadow-md cursor-pointer transition-all flex items-start gap-4 ${preset.color} ${
+                preset.role === "platform_admin" ? "md:col-span-2" : ""
+              }`}
             >
               <div className="p-2 bg-white dark:bg-zinc-900 rounded-lg shrink-0 shadow-sm border border-zinc-150 dark:border-zinc-800">
                 <preset.icon className="h-5 w-5" />
