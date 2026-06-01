@@ -1,65 +1,751 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
+import { useSelector } from "react-redux";
+import axios from "axios";
+import {
+  Users,
+  Clock,
+  CalendarCheck2,
+  TrendingUp,
+  Cpu,
+  Coins,
+  Settings,
+  ArrowRight,
+  ShieldCheck,
+  CheckCircle2,
+  Award,
+  Terminal,
+  Activity,
+  ChevronRight,
+  TrendingDown,
+  Building,
+  UserCheck
+} from "lucide-react";
+import type { RootState } from "./reduxToolkit/store";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
+export default function Dashboard() {
+  const user = useSelector((state: RootState) => state.employeeUI.user);
+
+  // Fetch employees list
+  const { data: employees } = useQuery({
+    queryKey: ["employees"],
+    queryFn: async () => {
+      const res = await axios.get("/api/employees");
+      return res.data.data || [];
+    },
+  });
+
+  // Fetch departments list
+  const { data: departments } = useQuery({
+    queryKey: ["departments"],
+    queryFn: async () => {
+      const res = await axios.get("/api/departments");
+      return res.data.data || [];
+    },
+  });
+
+  // HR Admin preview control state
+  const [adminDeptPreview, setAdminDeptPreview] = useState<string>("");
+
+  // Auto-initialize first department preview for HR Admins
+  useEffect(() => {
+    if (departments && departments.length > 0 && !adminDeptPreview) {
+      setAdminDeptPreview(departments[0].name);
+    }
+  }, [departments]);
+
+  // ----------------------------------------------------
+  // INTERACTIVE MOCK STATE TRIGGERS FOR WIDGETS
+  // ----------------------------------------------------
+
+  // 1. Engineering Build Simulator
+  const [buildLogs, setBuildLogs] = useState<string[]>([]);
+  const [isBuilding, setIsBuilding] = useState<boolean>(false);
+  const handleTriggerBuild = () => {
+    setIsBuilding(true);
+    setBuildLogs(["[CI/CD] Launching mock production compile pipeline..."]);
+    
+    const steps = [
+      "[CI/CD] Resolving code dependency trees (Turbo)... Complete.",
+      "[CI/CD] Running standard code linter rules... Clean.",
+      "[CI/CD] Compiling NextJS edge serverless functions...",
+      "[CI/CD] Pushing compiled assets to MongoDB Atlas cluster...",
+      "[CI/CD] Deploying edge chunks to global Vercel serverless pool...",
+      "[CI/CD] Live Production deployment online! 🚀"
+    ];
+
+    steps.forEach((step, idx) => {
+      setTimeout(() => {
+        setBuildLogs((prev) => [...prev, step]);
+        if (idx === steps.length - 1) {
+          setIsBuilding(false);
+        }
+      }, (idx + 1) * 900);
+    });
+  };
+
+  // 2. Sales Opportunity pipeline
+  const [salesOpportunities, setSalesOpportunities] = useState<any[]>([
+    { client: "Tata Consulting Services", amount: 180000, stage: "Closed Won" },
+    { client: "Reliance Retail", amount: 250000, stage: "Proposal" },
+    { client: "Adani Ventures", amount: 95000, stage: "Prospecting" },
+  ]);
+  const [clientName, setClientName] = useState("");
+  const [dealAmount, setDealAmount] = useState("");
+  const [dealStage, setDealStage] = useState("Prospecting");
+  const handleAddOpportunity = () => {
+    if (!clientName || !dealAmount) return;
+    setSalesOpportunities([
+      ...salesOpportunities,
+      { client: clientName, amount: Number(dealAmount), stage: dealStage },
+    ]);
+    setClientName("");
+    setDealAmount("");
+  };
+
+  // 3. Finance Treasury Expenses
+  const [expensesClaims, setExpensesClaims] = useState<any[]>([
+    { title: "AWS Edge Server Invoicing", amount: 45000, category: "Infrastructure" },
+    { title: "Shared Office Internet lease", amount: 15000, category: "Operations" },
+    { title: "Regional Travel Allowance", amount: 8000, category: "Travel" },
+  ]);
+  const [expenseTitle, setExpenseTitle] = useState("");
+  const [expenseAmount, setExpenseAmount] = useState("");
+  const [expenseCategory, setExpenseCategory] = useState("Operations");
+  const handleAddExpense = () => {
+    if (!expenseTitle || !expenseAmount) return;
+    setExpensesClaims([
+      ...expensesClaims,
+      { title: expenseTitle, amount: Number(expenseAmount), category: expenseCategory },
+    ]);
+    setExpenseTitle("");
+    setExpenseAmount("");
+  };
+
+  // 4. HR Interview Schedulers
+  const [interviews, setInterviews] = useState<any[]>([
+    { candidate: "Siddharth Sen", position: "Fullstack Dev", date: "June 3, 2026" },
+    { candidate: "Priya Murthy", position: "UI/UX Architect", date: "June 5, 2026" },
+  ]);
+  const [candidateName, setCandidateName] = useState("");
+  const [jobPosition, setJobPosition] = useState("");
+  const [interviewDate, setInterviewDate] = useState("");
+  const handleAddInterview = () => {
+    if (!candidateName || !jobPosition || !interviewDate) return;
+    setInterviews([
+      ...interviews,
+      { candidate: candidateName, position: jobPosition, date: interviewDate },
+    ]);
+    setCandidateName("");
+    setJobPosition("");
+    setInterviewDate("");
+  };
+
+  // ----------------------------------------------------
+  // HIERARCHY RESOLUTION LOGIC
+  // ----------------------------------------------------
+  const resolveUserPositionLabel = (userDept: any, activeUserId: string) => {
+    if (!userDept) return "Staff Contributor";
+
+    // 1. Check if Head
+    if (userDept.headIds?.includes(activeUserId)) {
+      return "Department Head (VP / CFO / Lead)";
+    }
+
+    // 2. Check if Manager
+    const matchingMgr = userDept.managers?.find((m: any) => m.managerId === activeUserId);
+    if (matchingMgr) {
+      return "Team Manager";
+    }
+
+    // 3. Check if Team Member under a specific Manager
+    const matchingTeam = userDept.managers?.find((m: any) => m.memberIds?.includes(activeUserId));
+    if (matchingTeam) {
+      const mgrName = employees?.find((e: any) => e._id === matchingTeam.managerId || e.id === matchingTeam.managerId)?.empName || "Manager";
+      return `Team Member (Reporting to ${mgrName})`;
+    }
+
+    return "Staff / Contributor";
+  };
+
+  // ----------------------------------------------------
+  // DYNAMIC WIDGET RENDER ROUTER
+  // ----------------------------------------------------
+  const renderWidget = (widgetId: string, hierarchyLabel: string, isLead: boolean) => {
+    switch (widgetId) {
+      case "sprint_tracker":
+        return (
+          <div key={widgetId} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm space-y-4 animate-fade-in">
+            <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
+              <h3 className="text-base font-bold flex items-center gap-2">
+                <Terminal className="h-5 w-5 text-blue-600" />
+                Engineering Sprint Board & CI/CD
+              </h3>
+              <span className="text-xxs px-2.5 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-bold rounded-full">
+                Active Branch: main
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-semibold text-zinc-500">
+              <div className="p-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-850 rounded-lg">
+                <span className="block text-zinc-400 font-bold mb-1">Server Status:</span>
+                <span className="text-sm font-bold text-emerald-600 flex items-center gap-1">
+                  <Activity className="h-3.5 w-3.5 animate-pulse" /> 99.98% Uptime
+                </span>
+              </div>
+              <div className="p-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-850 rounded-lg">
+                <span className="block text-zinc-400 font-bold mb-1">Code Quality:</span>
+                <span className="text-sm font-bold text-blue-600">A+ (TS Compiles)</span>
+              </div>
+              <div className="p-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-850 rounded-lg">
+                <span className="block text-zinc-400 font-bold mb-1">Pending PRs:</span>
+                <span className="text-sm font-bold text-amber-500">3 Reviews Open</span>
+              </div>
+              <div className="p-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-850 rounded-lg">
+                <span className="block text-zinc-400 font-bold mb-1">Sprint Velocity:</span>
+                <span className="text-sm font-bold text-zinc-850 dark:text-zinc-100">42 Story Points</span>
+              </div>
+            </div>
+
+            {/* Simulated Build Sandbox */}
+            <div className="space-y-3 bg-zinc-950 dark:bg-black rounded-lg p-4 border border-zinc-800 text-zinc-300 font-mono text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-zinc-400 font-bold">Edge Build Console Logs</span>
+                <Button
+                  onClick={handleTriggerBuild}
+                  disabled={isBuilding}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xxs h-7 px-3"
+                >
+                  {isBuilding ? "Compiling..." : "Trigger Production Build"}
+                </Button>
+              </div>
+              <div className="max-h-32 overflow-y-auto space-y-1.5 scrollbar-thin scrollbar-thumb-zinc-800">
+                {buildLogs.length > 0 ? (
+                  buildLogs.map((log, idx) => <div key={idx}>{log}</div>)
+                ) : (
+                  <div className="text-zinc-600">Terminal idle. Click "Trigger Production Build" to simulate compilation logs...</div>
+                )}
+              </div>
+            </div>
+
+            {isLead && (
+              <div className="bg-indigo-50/30 dark:bg-indigo-900/10 p-3 rounded-lg border border-indigo-100/30 text-xs font-semibold text-indigo-700 dark:text-indigo-300 flex justify-between items-center">
+                <span>VP/Manager Dashboard Action: Approve technical debt sprint tickets</span>
+                <Button className="bg-indigo-600 hover:bg-indigo-700 text-white text-xxs h-7">Approve Merge</Button>
+              </div>
+            )}
+          </div>
+        );
+
+      case "sales_pipeline":
+        const totalPipelineSum = salesOpportunities.reduce((acc, curr) => acc + curr.amount, 0);
+        return (
+          <div key={widgetId} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm space-y-4 animate-fade-in">
+            <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
+              <h3 className="text-base font-bold flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-blue-600" />
+                Sales CRM Pipeline Funnel
+              </h3>
+              <span className="text-xxs px-2.5 py-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 font-bold rounded-full">
+                Pipeline Value: ₹{totalPipelineSum.toLocaleString()}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Opportunities Form Input */}
+              <div className="md:col-span-1 border border-zinc-150 dark:border-zinc-800 rounded-xl p-4 bg-zinc-50/50 space-y-3">
+                <h4 className="text-xs font-bold text-zinc-500">Log New CRM Opportunity</h4>
+                <div className="space-y-2">
+                  <Input
+                    placeholder="Client Account Name"
+                    value={clientName}
+                    onChange={(e) => setClientName(e.target.value)}
+                    className="h-8 text-xs bg-white"
+                  />
+                  <Input
+                    placeholder="Deal Amount (INR)"
+                    type="number"
+                    value={dealAmount}
+                    onChange={(e) => setDealAmount(e.target.value)}
+                    className="h-8 text-xs bg-white"
+                  />
+                  <select
+                    value={dealStage}
+                    onChange={(e) => setDealStage(e.target.value)}
+                    className="w-full h-8 px-2.5 border border-zinc-200 rounded-lg text-xs focus:outline-none bg-white font-medium"
+                  >
+                    <option value="Prospecting">Prospecting</option>
+                    <option value="Proposal">Proposal</option>
+                    <option value="Closed Won">Closed Won</option>
+                  </select>
+                  <Button onClick={handleAddOpportunity} className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs h-8">
+                    Add Opportunity Deal
+                  </Button>
+                </div>
+              </div>
+
+              {/* Roster Pipeline Cards */}
+              <div className="md:col-span-2 space-y-3">
+                <h4 className="text-xs font-bold text-zinc-400 block">Deal Funnel opportunity logs</h4>
+                <div className="max-h-48 overflow-y-auto space-y-2 pr-1.5 scrollbar-thin">
+                  {salesOpportunities.map((op, idx) => (
+                    <div key={idx} className="flex justify-between items-center p-3 border border-zinc-100 dark:border-zinc-850 bg-white dark:bg-zinc-950 rounded-xl text-xs">
+                      <div>
+                        <span className="font-bold block text-zinc-900 dark:text-zinc-100">{op.client}</span>
+                        <span className={`text-xxs font-bold uppercase ${
+                          op.stage === "Closed Won" ? "text-emerald-500" : (op.stage === "Proposal" ? "text-amber-500" : "text-blue-500")
+                        }`}>{op.stage}</span>
+                      </div>
+                      <span className="font-mono font-bold text-zinc-850 dark:text-zinc-100">₹{op.amount.toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {isLead && (
+              <div className="bg-amber-50/30 dark:bg-amber-900/10 p-3 rounded-lg border border-amber-100/30 text-xs font-semibold text-amber-700 dark:text-amber-300 flex justify-between items-center">
+                <span>VP/Manager Dashboard Action: Set regional commission threshold goals</span>
+                <Button className="bg-amber-600 hover:bg-amber-700 text-white text-xxs h-7">Adjust Quotas</Button>
+              </div>
+            )}
+          </div>
+        );
+
+      case "treasury_ledger":
+        const totalExpensesSum = expensesClaims.reduce((acc, curr) => acc + curr.amount, 0);
+        const treasuryPool = 3400000 - totalExpensesSum;
+        return (
+          <div key={widgetId} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm space-y-4 animate-fade-in">
+            <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
+              <h3 className="text-base font-bold flex items-center gap-2">
+                <Coins className="h-5 w-5 text-blue-600" />
+                Finance Treasury & Expense Ledger
+              </h3>
+              <span className="text-xxs px-2.5 py-1 bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 font-bold rounded-full">
+                Treasury Reserve: ₹{treasuryPool.toLocaleString()}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Expense Claim Form */}
+              <div className="md:col-span-1 border border-zinc-150 dark:border-zinc-800 rounded-xl p-4 bg-zinc-50/50 space-y-3">
+                <h4 className="text-xs font-bold text-zinc-500">Post Operational Expense</h4>
+                <div className="space-y-2">
+                  <Input
+                    placeholder="Expense Title"
+                    value={expenseTitle}
+                    onChange={(e) => setExpenseTitle(e.target.value)}
+                    className="h-8 text-xs bg-white"
+                  />
+                  <Input
+                    placeholder="Amount (INR)"
+                    type="number"
+                    value={expenseAmount}
+                    onChange={(e) => setExpenseAmount(e.target.value)}
+                    className="h-8 text-xs bg-white"
+                  />
+                  <select
+                    value={expenseCategory}
+                    onChange={(e) => setExpenseCategory(e.target.value)}
+                    className="w-full h-8 px-2.5 border border-zinc-200 rounded-lg text-xs focus:outline-none bg-white font-medium"
+                  >
+                    <option value="Operations">Operations</option>
+                    <option value="Infrastructure">Infrastructure</option>
+                    <option value="Travel">Travel</option>
+                  </select>
+                  <Button onClick={handleAddExpense} className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs h-8">
+                    Submit Expense Claim
+                  </Button>
+                </div>
+              </div>
+
+              {/* Expense Ledger Logs */}
+              <div className="md:col-span-2 space-y-3">
+                <h4 className="text-xs font-bold text-zinc-400 block">Active Cost Center Ledger</h4>
+                <div className="max-h-48 overflow-y-auto space-y-2 pr-1.5 scrollbar-thin">
+                  {expensesClaims.map((ex, idx) => (
+                    <div key={idx} className="flex justify-between items-center p-3 border border-zinc-100 dark:border-zinc-850 bg-white dark:bg-zinc-950 rounded-xl text-xs">
+                      <div>
+                        <span className="font-bold block text-zinc-900 dark:text-zinc-100">{ex.title}</span>
+                        <span className="text-xxs font-bold text-zinc-400 uppercase tracking-wider">{ex.category}</span>
+                      </div>
+                      <span className="font-mono font-bold text-red-500">-₹{ex.amount.toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {isLead && (
+              <div className="bg-rose-50/30 dark:bg-rose-900/10 p-3 rounded-lg border border-rose-100/30 text-xs font-semibold text-rose-700 dark:text-rose-300 flex justify-between items-center">
+                <span>VP/Manager Dashboard Action: Authorize pending treasury disbursements</span>
+                <Button className="bg-rose-600 hover:bg-rose-700 text-white text-xxs h-7">Approve Payout</Button>
+              </div>
+            )}
+          </div>
+        );
+
+      case "recruitment_funnel":
+        return (
+          <div key={widgetId} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm space-y-4 animate-fade-in">
+            <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
+              <h3 className="text-base font-bold flex items-center gap-2">
+                <CalendarCheck2 className="h-5 w-5 text-blue-600" />
+                HR Recruitment & Onboarding Funnel
+              </h3>
+              <span className="text-xxs px-2.5 py-1 bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 font-bold rounded-full">
+                Sentiment: 88% Positive
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Interview Form */}
+              <div className="md:col-span-1 border border-zinc-150 dark:border-zinc-800 rounded-xl p-4 bg-zinc-50/50 space-y-3">
+                <h4 className="text-xs font-bold text-zinc-500">Schedule Candidate Interview</h4>
+                <div className="space-y-2">
+                  <Input
+                    placeholder="Candidate Full Name"
+                    value={candidateName}
+                    onChange={(e) => setCandidateName(e.target.value)}
+                    className="h-8 text-xs bg-white"
+                  />
+                  <Input
+                    placeholder="Target Job Position"
+                    value={jobPosition}
+                    onChange={(e) => setJobPosition(e.target.value)}
+                    className="h-8 text-xs bg-white"
+                  />
+                  <Input
+                    placeholder="Date (e.g. June 10)"
+                    value={interviewDate}
+                    onChange={(e) => setInterviewDate(e.target.value)}
+                    className="h-8 text-xs bg-white"
+                  />
+                  <Button onClick={handleAddInterview} className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs h-8">
+                    Schedule Interview
+                  </Button>
+                </div>
+              </div>
+
+              {/* Recruitment Lists */}
+              <div className="md:col-span-2 space-y-3">
+                <h4 className="text-xs font-bold text-zinc-400 block">Candidate Interview pipeline</h4>
+                <div className="max-h-48 overflow-y-auto space-y-2 pr-1.5 scrollbar-thin">
+                  {interviews.map((int, idx) => (
+                    <div key={idx} className="flex justify-between items-center p-3 border border-zinc-100 dark:border-zinc-850 bg-white dark:bg-zinc-950 rounded-xl text-xs">
+                      <div>
+                        <span className="font-bold block text-zinc-900 dark:text-zinc-100">{int.candidate}</span>
+                        <span className="text-xxs font-bold text-zinc-400 uppercase tracking-wider">{int.position}</span>
+                      </div>
+                      <span className="font-semibold text-zinc-700 dark:text-zinc-300 font-mono">{int.date}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {isLead && (
+              <div className="bg-indigo-50/30 dark:bg-indigo-900/10 p-3 rounded-lg border border-indigo-100/30 text-xs font-semibold text-indigo-700 dark:text-indigo-300 flex justify-between items-center">
+                <span>VP/Manager Dashboard Action: Approve candidates formal employment offers</span>
+                <Button className="bg-indigo-600 hover:bg-indigo-700 text-white text-xxs h-7">Approve Offer</Button>
+              </div>
+            )}
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  // ----------------------------------------------------
+  // PLATFORM OWNER VIEW
+  // ----------------------------------------------------
+  if (user?.role === "platform_admin") {
+    return (
+      <div className="space-y-8 animate-fade-in">
+        <div className="bg-gradient-to-r from-zinc-900 to-zinc-850 text-white rounded-2xl p-6 md:p-8 shadow-xl border border-zinc-800 relative overflow-hidden">
+          <div className="max-w-2xl">
+            <h1 className="text-3xl font-extrabold tracking-tight mb-2">Platform Owner Administration</h1>
+            <p className="text-zinc-400 text-sm">
+              Global multi-tenant metrics, MongoDB Atlas active connection pools, MRR clusters, and tenant suspension gates.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm">
+            <span className="text-xs text-zinc-400 font-bold block mb-1">Global Active Tenants</span>
+            <h3 className="text-2xl font-bold text-zinc-900 dark:text-zinc-55">14 Organizations</h3>
+            <span className="text-xxs text-emerald-500 font-semibold block mt-1.5">✓ All system modules operational</span>
+          </div>
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm">
+            <span className="text-xs text-zinc-400 block font-bold mb-1">SaaS MRR Growth</span>
+            <h3 className="text-2xl font-bold text-zinc-900 dark:text-zinc-55">₹8,45,000 / mo</h3>
+            <span className="text-xxs text-blue-500 font-semibold block mt-1.5">▲ +14.2% month-on-month</span>
+          </div>
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm">
+            <span className="text-xs text-zinc-400 block font-bold mb-1">Atlas M0 Connection Pools</span>
+            <h3 className="text-2xl font-bold text-zinc-900 dark:text-zinc-55">9 Active Pools</h3>
+            <span className="text-xxs text-zinc-400 font-medium block mt-1.5">Uptime logs synchronized cleanly</span>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm space-y-4">
+          <h3 className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5 text-blue-600" />
+            Global Tenants Cluster Control
+          </h3>
+          <div className="border border-zinc-150 dark:border-zinc-850 rounded-xl overflow-hidden text-xs">
+            <div className="bg-zinc-50 dark:bg-zinc-950 p-3 border-b border-zinc-150 dark:border-zinc-850 font-bold text-zinc-500 flex justify-between">
+              <span>Organization Tenant ID</span>
+              <span>Status Gate</span>
+            </div>
+            <div className="p-3.5 bg-white dark:bg-zinc-900 flex justify-between items-center border-b border-zinc-100 dark:border-zinc-850">
+              <div>
+                <span className="font-bold block text-zinc-800 dark:text-zinc-200">org_default (Mock Enterprise)</span>
+                <span className="text-xxs text-zinc-400 block mt-0.5">Timezone: Asia/Kolkata (IST)</span>
+              </div>
+              <span className="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-full font-bold text-xxs">Active</span>
+            </div>
+            <div className="p-3.5 bg-white dark:bg-zinc-900 flex justify-between items-center">
+              <div>
+                <span className="font-bold block text-zinc-800 dark:text-zinc-200">org_finance_test (Mock Finance Corp)</span>
+                <span className="text-xxs text-zinc-400 block mt-0.5">Timezone: Asia/Kolkata (IST)</span>
+              </div>
+              <span className="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-full font-bold text-xxs">Active</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Find department of active user in database
+  const userDept = departments?.find((d: any) => d.name === user?.department);
+  const activeUserId = user?.id || "mock_aarav";
+
+  // Determine hierarchy labels and roles
+  const hierarchyLabel = resolveUserPositionLabel(userDept, activeUserId);
+  const isLead =
+    hierarchyLabel.includes("Head") ||
+    hierarchyLabel.includes("Manager") ||
+    user?.position?.toLowerCase().includes("head") ||
+    user?.position?.toLowerCase().includes("manager") ||
+    user?.position?.toLowerCase().includes("cfo") ||
+    user?.position?.toLowerCase().includes("vp") ||
+    false;
+
+  // ----------------------------------------------------
+  // ORGANIZATIONAL ADMIN (HR) VIEW
+  // ----------------------------------------------------
+  if (user?.role === "org_admin") {
+    // Look up the preview department settings
+    const activePreviewDept = departments?.find((d: any) => d.name === adminDeptPreview);
+    const previewHeadNames = activePreviewDept?.headIds
+      ?.map((id: string) => employees?.find((e: any) => e._id === id || e.id === id)?.empName)
+      .filter(Boolean)
+      .join(", ") || "Vacant";
+
+    const totalStaffCount = employees?.length || 0;
+    const totalDeptsCount = departments?.length || 0;
+
+    return (
+      <div className="space-y-8 animate-fade-in">
+        {/* Admin Overview Header */}
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl p-6 md:p-8 shadow-md relative overflow-hidden">
+          <div className="max-w-2xl relative z-10">
+            <h1 className="text-3xl font-extrabold tracking-tight mb-2">Welcome to your Org Workspace</h1>
+            <p className="text-blue-100 text-sm">
+              Supervise multi-tenant directories, monitor leaves & clock logs, process payroll systems, and configure layout configurators.
+            </p>
+          </div>
+        </div>
+
+        {/* Global Summary Statistics */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm flex items-center justify-between">
+            <div className="space-y-1">
+              <span className="text-xs text-zinc-400 font-bold block">Workforce Headcount</span>
+              <h3 className="text-2xl font-bold text-zinc-850 dark:text-zinc-100">{totalStaffCount} Employees</h3>
+              <span className="text-xxs text-zinc-400 font-medium">All active scopes</span>
+            </div>
+            <div className="p-3 bg-blue-50 text-blue-600 rounded-lg"><Users className="h-5 w-5" /></div>
+          </div>
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm flex items-center justify-between">
+            <div className="space-y-1">
+              <span className="text-xs text-zinc-400 font-bold block">Active Divisions</span>
+              <h3 className="text-2xl font-bold text-zinc-850 dark:text-zinc-100">{totalDeptsCount} Departments</h3>
+              <span className="text-xxs text-zinc-400 font-medium">Auto-synced</span>
+            </div>
+            <div className="p-3 bg-indigo-50 text-indigo-600 rounded-lg"><Building className="h-5 w-5" /></div>
+          </div>
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm flex items-center justify-between">
+            <div className="space-y-1">
+              <span className="text-xs text-zinc-400 font-bold block">Leave Queue</span>
+              <h3 className="text-2xl font-bold text-zinc-850 dark:text-zinc-100">3 Pending</h3>
+              <span className="text-xxs text-amber-500 font-bold">Needs approval</span>
+            </div>
+            <div className="p-3 bg-amber-50 text-amber-600 rounded-lg"><CalendarCheck2 className="h-5 w-5" /></div>
+          </div>
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm flex items-center justify-between">
+            <div className="space-y-1">
+              <span className="text-xs text-zinc-400 font-bold block">Active Clock-ins</span>
+              <h3 className="text-2xl font-bold text-zinc-850 dark:text-zinc-100">{employees?.filter((e: any) => e.clockedIn).length || 0} Clocked In</h3>
+              <span className="text-xxs text-emerald-500 font-bold">Uptime verified</span>
+            </div>
+            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-lg"><Clock className="h-5 w-5" /></div>
+          </div>
+        </div>
+
+        {/* HR Dashboard Live Layout Preview Widget */}
+        <div className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 rounded-2xl p-6 space-y-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-200/60 pb-4">
+            <div className="space-y-1">
+              <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-50 flex items-center gap-2">
+                <Settings className="h-5 w-5 text-blue-600 animate-spin-slow" />
+                Department Dashboard Layout Live Preview Sandbox
+              </h2>
+              <p className="text-xs text-zinc-500 leading-relaxed">
+                Choose any active department below to preview and test the exact visual dashboard configured for that team division.
+              </p>
+            </div>
+
+            {/* Department Preview Selector */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-zinc-500 whitespace-nowrap">Preview Active Board:</span>
+              <select
+                value={adminDeptPreview}
+                onChange={(e) => setAdminDeptPreview(e.target.value)}
+                className="px-3 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900 text-xs focus:outline-none font-bold focus:ring-1 focus:ring-blue-500 text-zinc-850 dark:text-zinc-100"
+              >
+                {departments?.map((d: any) => (
+                  <option key={d._id || d.id} value={d.name}>
+                    {d.name} Layout
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {activePreviewDept ? (
+            <div className="space-y-6">
+              {/* Preview Info Tag */}
+              <div className="bg-white dark:bg-zinc-900 border border-zinc-150 dark:border-zinc-800 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <span className="text-xs text-zinc-400 font-bold block uppercase tracking-wider">Previewing Layout Mode:</span>
+                  <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-50 flex items-center gap-1.5">
+                    <Building className="h-4.5 w-4.5 text-blue-600" />
+                    {activePreviewDept.name} Department Workspace
+                  </h3>
+                </div>
+
+                <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 text-xs font-semibold text-zinc-500">
+                  <div className="flex justify-between gap-4">
+                    <span>Oversight Head:</span>
+                    <span className="text-blue-600 dark:text-blue-400">{previewHeadNames}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span>Sub-team Blocks:</span>
+                    <span className="text-zinc-800 dark:text-zinc-200">{activePreviewDept.managers?.length || 0} Managers</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span>Annual Budget Cap:</span>
+                    <span className="text-zinc-800 dark:text-zinc-200 font-mono">₹{activePreviewDept.budget?.annual?.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span>Enabled Modules:</span>
+                    <span className="text-violet-600 font-bold">{activePreviewDept.enabledWidgets?.length || 0} Widgets</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Dynamic Mounted Widgets Render */}
+              {activePreviewDept.enabledWidgets && activePreviewDept.enabledWidgets.length > 0 ? (
+                <div className="space-y-6">
+                  {activePreviewDept.enabledWidgets.map((w: string) => renderWidget(w, "Preview Mode (Lead Elevated)", true))}
+                </div>
+              ) : (
+                <div className="text-center py-16 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl bg-white text-zinc-400 text-xs">
+                  No active dashboard widgets are currently enabled for the "{activePreviewDept.name}" department.
+                  <div className="mt-2 text-xxs font-medium text-zinc-400">
+                    Navigate to the <Link href="/employees" className="text-blue-600 underline font-bold">Dashboard Configurator</Link> workspace to activate widgets and map team trees!
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-12 text-zinc-400 text-xs">Loading preview specifications...</div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ----------------------------------------------------
+  // GENERAL DEPARTMENT STAFF (ENGINEER / SALES / FINANCE) VIEW
+  // ----------------------------------------------------
+  if (user?.role === "employee" && user?.department) {
+    const isWidgetEnabled = (widgetId: string) => {
+      return userDept?.enabledWidgets?.includes(widgetId) || false;
+    };
+
+    return (
+      <div className="space-y-8 animate-fade-in">
+        {/* Employee Welcome Banner */}
+        <div className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-2xl p-6 md:p-8 shadow-md relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-8 opacity-10">
+            <Award className="h-48 w-48 rotate-12" />
+          </div>
+          <div className="max-w-2xl relative z-10">
+            <h1 className="text-3xl font-extrabold tracking-tight mb-2">Namaste, {user.name}!</h1>
+            <p className="text-violet-100 text-sm mb-6 leading-relaxed">
+              Welcome to your dedicated department workspace. Below are the customized active dashboard cards configured for the **{user.department}** department.
+            </p>
+
+            {/* Hierarchy Badge Card */}
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-violet-850/50 rounded-lg border border-violet-500/35 text-xs font-semibold">
+              <UserCheck className="h-4 w-4 text-violet-300" />
+              <span>Role Privilege: {hierarchyLabel}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Dynamic Mounted Widgets Render */}
+        {userDept?.enabledWidgets && userDept.enabledWidgets.length > 0 ? (
+          <div className="space-y-6">
+            {userDept.enabledWidgets.map((widgetId: string) => renderWidget(widgetId, hierarchyLabel, isLead))}
+          </div>
+        ) : (
+          <div className="text-center py-20 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900 text-zinc-400 text-xs">
+            No active dashboard modules are currently configured for your department ("{user.department}").
+            <div className="mt-2 text-xxs font-medium text-zinc-400">
+              Please contact your HR Administrator (Sahil) to activate widgets and map team trees under the configurator workspace!
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ----------------------------------------------------
+  // GENERAL FALLBACK IF ROLE NOT RESOLVED
+  // ----------------------------------------------------
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+    <div className="space-y-6 animate-fade-in">
+      <div className="text-center py-20 border border-zinc-200 rounded-xl bg-white space-y-4">
+        <h2 className="text-xl font-bold">Establishing Workspace Session...</h2>
+        <p className="text-sm text-zinc-400">Resolving organizational credentials from MongoDB.</p>
+        <Link href="/login" className="text-xs font-semibold px-4 py-2 bg-blue-600 text-white rounded-lg inline-block">
+          Go to Authentication PRESSETS
+        </Link>
+      </div>
     </div>
   );
 }
