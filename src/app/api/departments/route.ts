@@ -2,11 +2,18 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Department from "@/models/Department";
 import { getDepartmentBySlug } from "@/lib/departmentRegistry";
+import { verifyToken } from "@/lib/jwt";
 
 export async function GET(req: Request) {
   try {
+    const decoded = await verifyToken(req);
+    if (!decoded) {
+      return NextResponse.json({ success: false, error: "Unauthorized: Invalid or missing token" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
-    const orgId = searchParams.get("orgId");
+    const requestedOrgId = searchParams.get("orgId");
+    const orgId = decoded.role === "platform_admin" ? requestedOrgId : decoded.orgId;
 
     if (!orgId) {
       return NextResponse.json({ success: false, error: "orgId query parameter is required" }, { status: 400 });
@@ -27,9 +34,21 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    const decoded = await verifyToken(req);
+    if (!decoded) {
+      return NextResponse.json({ success: false, error: "Unauthorized: Invalid or missing token" }, { status: 401 });
+    }
+
+    // Standard employees shouldn't be creating departments
+    if (decoded.role === "employee") {
+      return NextResponse.json({ success: false, error: "Forbidden: HR permissions required" }, { status: 403 });
+    }
+
     await dbConnect();
     const body = await req.json();
-    let { orgId, slug, name, description, budget, headIds, managers } = body;
+    let { slug, name, description, budget, headIds, managers } = body;
+    const requestedOrgId = body.orgId;
+    const orgId = decoded.role === "platform_admin" ? requestedOrgId : decoded.orgId;
     
     if (!orgId || !name) {
       return NextResponse.json({ success: false, error: "orgId and name are required" }, { status: 400 });
@@ -71,16 +90,33 @@ export async function POST(req: Request) {
 
 export async function PUT(req: Request) {
   try {
+    const decoded = await verifyToken(req);
+    if (!decoded) {
+      return NextResponse.json({ success: false, error: "Unauthorized: Invalid or missing token" }, { status: 401 });
+    }
+
+    // Standard employees shouldn't be editing departments
+    if (decoded.role === "employee") {
+      return NextResponse.json({ success: false, error: "Forbidden: HR permissions required" }, { status: 403 });
+    }
+
     await dbConnect();
     const body = await req.json();
-    const { id, headIds, managers, budget } = body;
+    const { id, headIds, managers, budget, orgId: requestedOrgId } = body;
+    const orgId = decoded.role === "platform_admin" ? requestedOrgId : decoded.orgId;
 
     if (!id) {
       return NextResponse.json({ success: false, error: "Department ID is required" }, { status: 400 });
     }
 
-    const updatedDept = await Department.findByIdAndUpdate(
-      id,
+    // Ensure they only update within their org unless platform admin
+    const query: any = { _id: id };
+    if (decoded.role !== "platform_admin") {
+      query.orgId = orgId;
+    }
+
+    const updatedDept = await Department.findOneAndUpdate(
+      query,
       {
         ...(headIds !== undefined && { headIds }),
         ...(managers !== undefined && { managers }),

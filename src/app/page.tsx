@@ -50,13 +50,11 @@ export default function LoginPage() {
 
   // Fetch all dynamically created employees from the database for Org Technologies
   const { data: dynamicEmployees, isLoading } = useQuery({
-    queryKey: ["employees-login", orgData?._id],
+    queryKey: ["employees-login"],
     queryFn: async () => {
-      if (!orgData?._id) return [];
-      const res = await axios.get(`/api/employees?orgId=${orgData._id}`);
+      const res = await axios.get("/api/auth/sandbox-profiles");
       return res.data.data || [];
     },
-    enabled: !!orgData?._id,
   });
 
   // Build profile list dynamically

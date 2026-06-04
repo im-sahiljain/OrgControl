@@ -3,6 +3,7 @@ import dbConnect from "@/lib/dbConnect";
 import Employee from "@/models/Employee";
 import Organization from "@/models/Organization";
 import PlatformOwner from "@/models/PlatformOwner";
+import { signToken } from "@/lib/jwt";
 
 export async function POST(req: Request) {
   try {
@@ -25,16 +26,26 @@ export async function POST(req: Request) {
           { status: 401 }
         );
       }
-      return NextResponse.json({
+      const responsePayload = {
+        id: adminUser._id.toString(),
+        name: adminUser.name,
+        email: adminUser.email,
+        role: "platform_admin" as const,
+        orgId: "platform_layer",
+      };
+      const token = signToken(responsePayload);
+      const response = NextResponse.json({
         success: true,
-        user: {
-          id: adminUser._id.toString(),
-          name: adminUser.name,
-          email: adminUser.email,
-          role: "platform_admin",
-          orgId: "platform_layer",
-        },
+        user: responsePayload,
       });
+      response.cookies.set("org_control_token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 60 * 60 * 24, // 1 day
+        path: "/",
+      });
+      return response;
     }
 
     // Organization Login (HR Admin or Employee)
@@ -53,7 +64,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // Check organization status — orgId is now an ObjectId
+    // Check organization status
     const org = await Organization.findById(user.orgId);
     if (!org) {
       return NextResponse.json(
@@ -76,18 +87,28 @@ export async function POST(req: Request) {
     );
     const role = isHrAdmin ? "org_admin" : "employee";
 
-    return NextResponse.json({
+    const responsePayload = {
+      id: user._id.toString(),
+      name: user.empName,
+      email: user.email,
+      role: role as any,
+      orgId: user.orgId.toString(),
+      department: user.department,
+      position: user.empPosition,
+    };
+    const token = signToken(responsePayload);
+    const response = NextResponse.json({
       success: true,
-      user: {
-        id: user._id.toString(),
-        name: user.empName,
-        email: user.email,
-        role: role,
-        orgId: user.orgId.toString(),
-        department: user.department,
-        position: user.empPosition,
-      },
+      user: responsePayload,
     });
+    response.cookies.set("org_control_token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24, // 1 day
+      path: "/",
+    });
+    return response;
 
   } catch (error: any) {
     console.error("Auth Login Error:", error);

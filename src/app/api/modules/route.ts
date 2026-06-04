@@ -1,11 +1,18 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import DashboardModule from "@/models/DashboardModule";
+import { verifyToken } from "@/lib/jwt";
 
 export async function GET(req: Request) {
   try {
+    const decoded = await verifyToken(req);
+    if (!decoded) {
+      return NextResponse.json({ success: false, error: "Unauthorized: Invalid or missing token" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
-    const orgId = searchParams.get("orgId");
+    const requestedOrgId = searchParams.get("orgId");
+    const orgId = decoded.role === "platform_admin" ? requestedOrgId : decoded.orgId;
 
     if (!orgId) {
       return NextResponse.json({ success: false, error: "orgId query parameter is required" }, { status: 400 });
@@ -26,9 +33,21 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    const decoded = await verifyToken(req);
+    if (!decoded) {
+      return NextResponse.json({ success: false, error: "Unauthorized: Invalid or missing token" }, { status: 401 });
+    }
+
+    // Standard employees shouldn't be creating modules
+    if (decoded.role === "employee") {
+      return NextResponse.json({ success: false, error: "Forbidden: HR permissions required" }, { status: 403 });
+    }
+
     await dbConnect();
     const body = await req.json();
-    const { orgId, name, description, icon, color, fields } = body;
+    const { name, description, icon, color, fields } = body;
+    const requestedOrgId = body.orgId;
+    const orgId = decoded.role === "platform_admin" ? requestedOrgId : decoded.orgId;
 
     if (!orgId || !name || !fields || !Array.isArray(fields)) {
       return NextResponse.json({ success: false, error: "Missing required fields including orgId" }, { status: 400 });
@@ -56,16 +75,33 @@ export async function POST(req: Request) {
 
 export async function PUT(req: Request) {
   try {
+    const decoded = await verifyToken(req);
+    if (!decoded) {
+      return NextResponse.json({ success: false, error: "Unauthorized: Invalid or missing token" }, { status: 401 });
+    }
+
+    // Standard employees shouldn't be editing modules
+    if (decoded.role === "employee") {
+      return NextResponse.json({ success: false, error: "Forbidden: HR permissions required" }, { status: 403 });
+    }
+
     await dbConnect();
     const body = await req.json();
-    const { id, name, description, icon, color, fields, status } = body;
+    const { id, name, description, icon, color, fields, status, orgId: requestedOrgId } = body;
+    const orgId = decoded.role === "platform_admin" ? requestedOrgId : decoded.orgId;
 
     if (!id) {
       return NextResponse.json({ success: false, error: "Module ID is required" }, { status: 400 });
     }
 
-    const updatedModule = await DashboardModule.findByIdAndUpdate(
-      id,
+    // Ensure standard admin only updates within their org
+    const query: any = { _id: id };
+    if (decoded.role !== "platform_admin") {
+      query.orgId = orgId;
+    }
+
+    const updatedModule = await DashboardModule.findOneAndUpdate(
+      query,
       {
         ...(name && { name }),
         ...(description !== undefined && { description }),
@@ -93,6 +129,16 @@ export async function PUT(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
+    const decoded = await verifyToken(req);
+    if (!decoded) {
+      return NextResponse.json({ success: false, error: "Unauthorized: Invalid or missing token" }, { status: 401 });
+    }
+
+    // Standard employees shouldn't be deleting modules
+    if (decoded.role === "employee") {
+      return NextResponse.json({ success: false, error: "Forbidden: HR permissions required" }, { status: 403 });
+    }
+
     await dbConnect();
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
@@ -101,7 +147,13 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ success: false, error: "Module ID is required" }, { status: 400 });
     }
 
-    const deleted = await DashboardModule.findByIdAndDelete(id);
+    // Ensure standard admin only deletes within their org
+    const query: any = { _id: id };
+    if (decoded.role !== "platform_admin") {
+      query.orgId = decoded.orgId;
+    }
+
+    const deleted = await DashboardModule.findOneAndDelete(query);
     if (!deleted) {
       return NextResponse.json({ success: false, error: "Module not found" }, { status: 404 });
     }

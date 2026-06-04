@@ -1,11 +1,18 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Employee from "@/models/Employee";
+import { verifyToken } from "@/lib/jwt";
 
 export async function GET(req: Request) {
   try {
+    const decoded = await verifyToken(req);
+    if (!decoded) {
+      return NextResponse.json({ success: false, error: "Unauthorized: Invalid or missing token" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
-    const orgId = searchParams.get("orgId");
+    const requestedOrgId = searchParams.get("orgId");
+    const orgId = decoded.role === "platform_admin" ? requestedOrgId : decoded.orgId;
 
     if (!orgId) {
       return NextResponse.json({ success: false, error: "orgId query parameter is required" }, { status: 400 });
@@ -26,9 +33,21 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    const decoded = await verifyToken(req);
+    if (!decoded) {
+      return NextResponse.json({ success: false, error: "Unauthorized: Invalid or missing token" }, { status: 401 });
+    }
+
+    // Standard employees shouldn't be adding other employees
+    if (decoded.role === "employee") {
+      return NextResponse.json({ success: false, error: "Forbidden: HR permissions required" }, { status: 403 });
+    }
+
     await dbConnect();
     const body = await req.json();
-    const { orgId, empName, empAge, empPosition, email, password, department, salary } = body;
+    const { empName, empAge, empPosition, email, password, department, salary } = body;
+    const requestedOrgId = body.orgId;
+    const orgId = decoded.role === "platform_admin" ? requestedOrgId : decoded.orgId;
 
     if (!orgId || !empName || !empAge || !empPosition || !email || !password) {
       return NextResponse.json({ success: false, error: "Missing required fields (including email and password)" }, { status: 400 });
