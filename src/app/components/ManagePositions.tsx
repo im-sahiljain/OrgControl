@@ -6,9 +6,12 @@ import axios from "axios";
 import { Briefcase, Loader2, Plus, Trash2, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useSelector } from "react-redux";
+import type { RootState } from "../reduxToolkit/store";
 
 export default function ManagePositions() {
   const queryClient = useQueryClient();
+  const user = useSelector((state: RootState) => state.employeeUI.user);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -18,7 +21,7 @@ export default function ManagePositions() {
   const { data: departments } = useQuery({
     queryKey: ["departments"],
     queryFn: async () => {
-      const res = await axios.get("/api/departments");
+      const res = await axios.get(`/api/departments?orgId=${user?.orgId}`);
       return res.data.data || [];
     },
   });
@@ -27,7 +30,7 @@ export default function ManagePositions() {
   const { data: positions, isLoading } = useQuery({
     queryKey: ["positions"],
     queryFn: async () => {
-      const res = await axios.get("/api/positions");
+      const res = await axios.get(`/api/positions?orgId=${user?.orgId}`);
       return res.data.data || [];
     },
   });
@@ -35,7 +38,7 @@ export default function ManagePositions() {
   // Create mutation
   const addPositionMutation = useMutation({
     mutationFn: async (payload: any) => {
-      return axios.post("/api/positions", payload);
+      return axios.post("/api/positions", { ...payload, orgId: user?.orgId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["positions"] });
@@ -51,7 +54,7 @@ export default function ManagePositions() {
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      return axios.delete(`/api/positions?id=${id}`);
+      return axios.delete(`/api/positions?id=${id}`, { data: { orgId: user?.orgId } });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["positions"] });

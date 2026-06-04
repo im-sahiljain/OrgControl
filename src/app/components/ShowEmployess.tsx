@@ -39,7 +39,7 @@ const ShowEmployess = () => {
   const { data: employees, isLoading, isError } = useQuery({
     queryKey: ["employees"],
     queryFn: async () => {
-      const res = await axios.get("/api/employees");
+      const res = await axios.get(`/api/employees?orgId=${user?.orgId}`);
       return res.data.data || [];
     },
   });
@@ -48,7 +48,7 @@ const ShowEmployess = () => {
   const { data: departments } = useQuery({
     queryKey: ["departments"],
     queryFn: async () => {
-      const res = await axios.get("/api/departments");
+      const res = await axios.get(`/api/departments?orgId=${user?.orgId}`);
       return res.data.data || [];
     },
   });
@@ -56,7 +56,7 @@ const ShowEmployess = () => {
   // Delete employee mutation
   const deleteEmployeeMutation = useMutation({
     mutationFn: async (id: string) => {
-      await axios.delete(`/api/employees/${id}`);
+      await axios.delete(`/api/employees/${id}`, { data: { orgId: user?.orgId } });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["employees"] });
@@ -71,7 +71,7 @@ const ShowEmployess = () => {
   const promoteMutation = useMutation({
     mutationFn: async (payload: { id: string; empPosition: string; department: string; salary: number }) => {
       const { id, ...data } = payload;
-      const res = await axios.put(`/api/employees/${id}`, data);
+      const res = await axios.put(`/api/employees/${id}`, { ...data, orgId: user?.orgId });
       return res.data;
     },
     onSuccess: (data) => {

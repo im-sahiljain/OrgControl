@@ -2,20 +2,19 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Employee from "@/models/Employee";
 
-export async function GET(
-  req: Request,
-  context: { params: Promise<{ id: string }> | { id: string } }
-) {
+export async function GET(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const params = await context.params;
-    const id = params.id;
+    const { id } = params;
+    const { searchParams } = new URL(req.url);
+    const orgId = searchParams.get("orgId");
 
-    if (!process.env.MONGODB_URI) {
-      return NextResponse.json({ success: false, error: "Database offline" }, { status: 503 });
+    if (!orgId) {
+      return NextResponse.json({ success: false, error: "orgId query parameter is required" }, { status: 400 });
     }
 
     await dbConnect();
-    const employee = await Employee.findOne({ _id: id, orgId: "org_default" });
+    const employee = await Employee.findOne({ _id: id, orgId });
 
     if (!employee) {
       return NextResponse.json({ success: false, error: "Employee not found" }, { status: 404 });
@@ -27,22 +26,20 @@ export async function GET(
   }
 }
 
-export async function PUT(
-  req: Request,
-  context: { params: Promise<{ id: string }> | { id: string } }
-) {
+export async function PUT(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const params = await context.params;
-    const id = params.id;
+    const { id } = params;
     const body = await req.json();
+    const orgId = body.orgId;
 
-    if (!process.env.MONGODB_URI) {
-      return NextResponse.json({ success: true, data: { _id: id, ...body } });
+    if (!orgId) {
+      return NextResponse.json({ success: false, error: "orgId is required in body" }, { status: 400 });
     }
 
     await dbConnect();
     const employee = await Employee.findOneAndUpdate(
-      { _id: id, orgId: "org_default" },
+      { _id: id, orgId },
       { $set: body },
       { new: true, runValidators: true }
     );
@@ -57,20 +54,19 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
-  req: Request,
-  context: { params: Promise<{ id: string }> | { id: string } }
-) {
+export async function DELETE(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const params = await context.params;
-    const id = params.id;
+    const { id } = params;
+    const body = await req.json().catch(() => ({}));
+    const orgId = body.orgId;
 
-    if (!process.env.MONGODB_URI) {
-      return NextResponse.json({ success: true, data: { _id: id } });
+    if (!orgId) {
+      return NextResponse.json({ success: false, error: "orgId is required in body" }, { status: 400 });
     }
 
     await dbConnect();
-    const employee = await Employee.findOneAndDelete({ _id: id, orgId: "org_default" });
+    const employee = await Employee.findOneAndDelete({ _id: id, orgId });
 
     if (!employee) {
       return NextResponse.json({ success: false, error: "Employee not found" }, { status: 404 });

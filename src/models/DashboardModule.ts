@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface IDashboardModule extends Document {
-  orgId: string;
+  orgId: mongoose.Types.ObjectId;
   name: string;
   description: string;
   icon: string;
@@ -18,7 +18,7 @@ export interface IDashboardModule extends Document {
 
 const DashboardModuleSchema: Schema = new Schema<IDashboardModule>(
   {
-    orgId: { type: String, required: true, index: true },
+    orgId: { type: Schema.Types.ObjectId, ref: "Organization", required: true, index: true },
     name: { type: String, required: true },
     description: { type: String, required: true },
     icon: { type: String, required: true, default: "Layout" },

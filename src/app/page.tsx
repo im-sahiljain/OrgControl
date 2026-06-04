@@ -1,492 +1,364 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import Link from "next/link";
+import React, { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { useSelector } from "react-redux";
 import axios from "axios";
-import {
-  Users,
-  Clock,
-  CalendarCheck2,
-  TrendingUp,
-  Cpu,
-  Coins,
-  Settings,
-  ArrowRight,
-  ShieldCheck,
-  CheckCircle2,
-  Award,
-  Terminal,
-  Activity,
-  ChevronRight,
-  TrendingDown,
-  Building,
-  UserCheck
-} from "lucide-react";
+import { loginUser } from "./reduxToolkit/slice";
 import type { RootState } from "./reduxToolkit/store";
+import {
+  Cpu,
+  ShieldAlert,
+  Users,
+  ShieldCheck,
+  Building2,
+  LogIn,
+  Plus,
+  ArrowLeft,
+  Menu,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import DynamicModuleCard from "./components/DynamicModuleCard";
+import Link from "next/link";
 
-export default function Dashboard() {
-  const user = useSelector((state: RootState) => state.employeeUI.user);
+export default function LoginPage() {
+  const dispatch = useDispatch();
+  const router = useRouter();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const isAuthenticated = useSelector(
+    (state: RootState) => state.employeeUI.isAuthenticated,
+  );
 
-  // Fetch employees list
-  const { data: employees } = useQuery({
-    queryKey: ["employees"],
+  // Fetch organization "Org Technologies" slug "org-technologies" to get its real _id
+  const { data: orgData } = useQuery({
+    queryKey: ["org-technologies"],
     queryFn: async () => {
-      const res = await axios.get("/api/employees");
-      return res.data.data || [];
+      const res = await axios.get("/api/organizations/org-technologies");
+      return res.data.data;
     },
   });
 
-  // Fetch dynamic modules
-  const { data: modulesList } = useQuery({
-    queryKey: ["modules"],
+  // Fetch the platform owner details (dynamic from DB via new route)
+  const { data: platformOwner } = useQuery({
+    queryKey: ["platform-owner"],
     queryFn: async () => {
-      const res = await axios.get("/api/modules");
-      return res.data.data || [];
+      const res = await axios.get("/api/auth/platform-owner");
+      return res.data.data;
     },
   });
 
-  // Fetch departments list
-  const { data: departments } = useQuery({
-    queryKey: ["departments"],
+  // Fetch all dynamically created employees from the database for Org Technologies
+  const { data: dynamicEmployees, isLoading } = useQuery({
+    queryKey: ["employees-login", orgData?._id],
     queryFn: async () => {
-      const res = await axios.get("/api/departments");
+      if (!orgData?._id) return [];
+      const res = await axios.get(`/api/employees?orgId=${orgData._id}`);
       return res.data.data || [];
     },
+    enabled: !!orgData?._id,
   });
 
-  // HR Admin preview control state
-  const [adminDeptPreview, setAdminDeptPreview] = useState<string>("");
+  // Build profile list dynamically
+  const allLoginProfiles: any[] = [];
 
-  // Auto-initialize first department preview for HR Admins
-  useEffect(() => {
-    if (departments && departments.length > 0 && !adminDeptPreview) {
-      setAdminDeptPreview(departments[0].name);
-    }
-  }, [departments]);
-
-  // ----------------------------------------------------
-  // INTERACTIVE MOCK STATE TRIGGERS FOR WIDGETS
-  // ----------------------------------------------------
-
-  // 1. Engineering Build Simulator
-  const [buildLogs, setBuildLogs] = useState<string[]>([]);
-  const [isBuilding, setIsBuilding] = useState<boolean>(false);
-  const handleTriggerBuild = () => {
-    setIsBuilding(true);
-    setBuildLogs(["[CI/CD] Launching mock production compile pipeline..."]);
-    
-    const steps = [
-      "[CI/CD] Resolving code dependency trees (Turbo)... Complete.",
-      "[CI/CD] Running standard code linter rules... Clean.",
-      "[CI/CD] Compiling NextJS edge serverless functions...",
-      "[CI/CD] Pushing compiled assets to MongoDB Atlas cluster...",
-      "[CI/CD] Deploying edge chunks to global Vercel serverless pool...",
-      "[CI/CD] Live Production deployment online! 🚀"
-    ];
-
-    steps.forEach((step, idx) => {
-      setTimeout(() => {
-        setBuildLogs((prev) => [...prev, step]);
-        if (idx === steps.length - 1) {
-          setIsBuilding(false);
-        }
-      }, (idx + 1) * 900);
+  // Add employees first, check for HR admin role
+  if (dynamicEmployees) {
+    dynamicEmployees.forEach((emp: any) => {
+      const isHrAdmin = emp.department === "Human Resources" && (
+        emp.empPosition.toLowerCase().includes("head") || 
+        emp.empPosition.toLowerCase().includes("chro")
+      );
+      const role = isHrAdmin ? ("org_admin" as const) : ("employee" as const);
+      
+      allLoginProfiles.push({
+        id: emp._id || emp.id,
+        role: role,
+        name: emp.empName,
+        email: emp.email,
+        desc: isHrAdmin 
+          ? `Log in as HR Administrator (${emp.empName}) to supervise directories, payroll and layouts.`
+          : `Log in as ${emp.empName} to access the ${emp.department || "Organization"} workspace.`,
+        icon: isHrAdmin ? ShieldCheck : Users,
+        color: isHrAdmin
+          ? "border-emerald-200 dark:border-emerald-900 bg-emerald-50/40 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400"
+          : "border-zinc-200 dark:border-zinc-800 bg-zinc-50/40 dark:bg-zinc-950/10 text-zinc-650",
+        department: emp.department || "Unassigned",
+        position: emp.empPosition,
+      });
     });
-  };
-
-  // 2. Sales Opportunity pipeline
-  const [salesOpportunities, setSalesOpportunities] = useState<any[]>([
-    { client: "Tata Consulting Services", amount: 180000, stage: "Closed Won" },
-    { client: "Reliance Retail", amount: 250000, stage: "Proposal" },
-    { client: "Adani Ventures", amount: 95000, stage: "Prospecting" },
-  ]);
-  const [clientName, setClientName] = useState("");
-  const [dealAmount, setDealAmount] = useState("");
-  const [dealStage, setDealStage] = useState("Prospecting");
-  const handleAddOpportunity = () => {
-    if (!clientName || !dealAmount) return;
-    setSalesOpportunities([
-      ...salesOpportunities,
-      { client: clientName, amount: Number(dealAmount), stage: dealStage },
-    ]);
-    setClientName("");
-    setDealAmount("");
-  };
-
-  // 3. Finance Treasury Expenses
-  const [expensesClaims, setExpensesClaims] = useState<any[]>([
-    { title: "AWS Edge Server Invoicing", amount: 45000, category: "Infrastructure" },
-    { title: "Shared Office Internet lease", amount: 15000, category: "Operations" },
-    { title: "Regional Travel Allowance", amount: 8000, category: "Travel" },
-  ]);
-  const [expenseTitle, setExpenseTitle] = useState("");
-  const [expenseAmount, setExpenseAmount] = useState("");
-  const [expenseCategory, setExpenseCategory] = useState("Operations");
-  const handleAddExpense = () => {
-    if (!expenseTitle || !expenseAmount) return;
-    setExpensesClaims([
-      ...expensesClaims,
-      { title: expenseTitle, amount: Number(expenseAmount), category: expenseCategory },
-    ]);
-    setExpenseTitle("");
-    setExpenseAmount("");
-  };
-
-  // 4. HR Interview Schedulers
-  const [interviews, setInterviews] = useState<any[]>([
-    { candidate: "Siddharth Sen", position: "Fullstack Dev", date: "June 3, 2026" },
-    { candidate: "Priya Murthy", position: "UI/UX Architect", date: "June 5, 2026" },
-  ]);
-  const [candidateName, setCandidateName] = useState("");
-  const [jobPosition, setJobPosition] = useState("");
-  const [interviewDate, setInterviewDate] = useState("");
-  const handleAddInterview = () => {
-    if (!candidateName || !jobPosition || !interviewDate) return;
-    setInterviews([
-      ...interviews,
-      { candidate: candidateName, position: jobPosition, date: interviewDate },
-    ]);
-    setCandidateName("");
-    setJobPosition("");
-    setInterviewDate("");
-  };
-
-  // ----------------------------------------------------
-  // HIERARCHY RESOLUTION LOGIC
-  // ----------------------------------------------------
-  const resolveUserPositionLabel = (userDept: any, activeUserId: string) => {
-    if (!userDept) return "Staff Contributor";
-
-    // 1. Check if Head
-    if (userDept.headIds?.includes(activeUserId)) {
-      return "Department Head (VP / CFO / Lead)";
-    }
-
-    // 2. Check if Manager
-    const matchingMgr = userDept.managers?.find((m: any) => m.managerId === activeUserId);
-    if (matchingMgr) {
-      return "Team Manager";
-    }
-
-    // 3. Check if Team Member under a specific Manager
-    const matchingTeam = userDept.managers?.find((m: any) => m.memberIds?.includes(activeUserId));
-    if (matchingTeam) {
-      const mgrName = employees?.find((e: any) => e._id === matchingTeam.managerId || e.id === matchingTeam.managerId)?.empName || "Manager";
-      return `Team Member (Reporting to ${mgrName})`;
-    }
-
-    return "Staff / Contributor";
-  };
-
-  // ----------------------------------------------------
-  // PLATFORM OWNER VIEW
-  // ----------------------------------------------------
-  if (user?.role === "platform_admin") {
-    return (
-      <div className="space-y-8 animate-fade-in">
-        <div className="bg-gradient-to-r from-zinc-900 to-zinc-850 text-white rounded-2xl p-6 md:p-8 shadow-xl border border-zinc-800 relative overflow-hidden">
-          <div className="max-w-2xl">
-            <h1 className="text-3xl font-extrabold tracking-tight mb-2">Platform Owner Administration</h1>
-            <p className="text-zinc-400 text-sm">
-              Global multi-tenant metrics, MongoDB Atlas active connection pools, MRR clusters, and tenant suspension gates.
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm">
-            <span className="text-xs text-zinc-400 font-bold block mb-1">Global Active Tenants</span>
-            <h3 className="text-2xl font-bold text-zinc-900 dark:text-zinc-55">14 Organizations</h3>
-            <span className="text-xxs text-emerald-500 font-semibold block mt-1.5">✓ All system modules operational</span>
-          </div>
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm">
-            <span className="text-xs text-zinc-400 block font-bold mb-1">SaaS MRR Growth</span>
-            <h3 className="text-2xl font-bold text-zinc-900 dark:text-zinc-55">₹8,45,000 / mo</h3>
-            <span className="text-xxs text-blue-500 font-semibold block mt-1.5">▲ +14.2% month-on-month</span>
-          </div>
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm">
-            <span className="text-xs text-zinc-400 block font-bold mb-1">Atlas M0 Connection Pools</span>
-            <h3 className="text-2xl font-bold text-zinc-900 dark:text-zinc-55">9 Active Pools</h3>
-            <span className="text-xxs text-zinc-400 font-medium block mt-1.5">Uptime logs synchronized cleanly</span>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm space-y-4">
-          <h3 className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-blue-600" />
-            Global Tenants Cluster Control
-          </h3>
-          <div className="border border-zinc-150 dark:border-zinc-850 rounded-xl overflow-hidden text-xs">
-            <div className="bg-zinc-50 dark:bg-zinc-950 p-3 border-b border-zinc-150 dark:border-zinc-850 font-bold text-zinc-500 flex justify-between">
-              <span>Organization Tenant ID</span>
-              <span>Status Gate</span>
-            </div>
-            <div className="p-3.5 bg-white dark:bg-zinc-900 flex justify-between items-center border-b border-zinc-100 dark:border-zinc-850">
-              <div>
-                <span className="font-bold block text-zinc-800 dark:text-zinc-200">org_default (Mock Enterprise)</span>
-                <span className="text-xxs text-zinc-400 block mt-0.5">Timezone: Asia/Kolkata (IST)</span>
-              </div>
-              <span className="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-full font-bold text-xxs">Active</span>
-            </div>
-            <div className="p-3.5 bg-white dark:bg-zinc-900 flex justify-between items-center">
-              <div>
-                <span className="font-bold block text-zinc-800 dark:text-zinc-200">org_finance_test (Mock Finance Corp)</span>
-                <span className="text-xxs text-zinc-400 block mt-0.5">Timezone: Asia/Kolkata (IST)</span>
-              </div>
-              <span className="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-full font-bold text-xxs">Active</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
   }
 
-  // Find department of active user in database
-  const userDept = departments?.find((d: any) => d.name === user?.department);
-  const activeUserId = user?.id || "mock_aarav";
+  // Add Platform Owner if present
+  if (platformOwner) {
+    allLoginProfiles.push({
+      id: platformOwner._id || platformOwner.id,
+      role: "platform_admin" as const,
+      name: platformOwner.name,
+      email: platformOwner.email,
+      desc: "Access global multi-tenant metrics, MRR growth, active connection pools, and tenant control.",
+      icon: Cpu,
+      color: "border-sky-200 dark:border-sky-900 bg-sky-50/40 dark:bg-sky-950/20 text-sky-600 dark:text-sky-400",
+      department: "System Administration",
+      position: "Platform Owner",
+    });
+  }
 
-  // Determine hierarchy labels and roles
-  const hierarchyLabel = resolveUserPositionLabel(userDept, activeUserId);
-  const isLead =
-    hierarchyLabel.includes("Head") ||
-    hierarchyLabel.includes("Manager") ||
-    user?.position?.toLowerCase().includes("head") ||
-    user?.position?.toLowerCase().includes("manager") ||
-    user?.position?.toLowerCase().includes("cfo") ||
-    user?.position?.toLowerCase().includes("vp") ||
-    false;
+  const handleLogin = (preset: any) => {
+    dispatch(
+      loginUser({
+        id: preset.id,
+        name: preset.name,
+        email: preset.email,
+        role: preset.role,
+        orgId: preset.role === "platform_admin" ? "platform_layer" : (orgData?._id || "org_default"),
+        department: preset.department,
+        position: preset.position,
+      }),
+    );
+    if (preset.role === "platform_admin") {
+      router.push("/admin/dashboard");
+    } else {
+      router.push("/dashboard");
+    }
+  };
 
-  // ----------------------------------------------------
-  // ORGANIZATIONAL ADMIN (HR) VIEW
-  // ----------------------------------------------------
-  if (user?.role === "org_admin") {
-    // Look up the preview department settings
-    const activePreviewDept = departments?.find((d: any) => d.name === adminDeptPreview);
-    const previewHeadNames = activePreviewDept?.headIds
-      ?.map((id: string) => employees?.find((e: any) => e._id === id || e.id === id)?.empName)
-      .filter(Boolean)
-      .join(", ") || "Vacant";
+  const [selectedDepartment, setSelectedDepartment] = useState<string | null>(
+    null,
+  );
 
-    const totalStaffCount = employees?.length || 0;
-    const totalDeptsCount = departments?.length || 0;
+  const uniqueDepartments = Array.from(
+    new Set(allLoginProfiles.map((p) => p.department || "Unassigned")),
+  );
 
-    return (
-      <div className="space-y-8 animate-fade-in">
-        {/* Admin Overview Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl p-6 md:p-8 shadow-md relative overflow-hidden">
-          <div className="max-w-2xl relative z-10">
-            <h1 className="text-3xl font-extrabold tracking-tight mb-2">Welcome to your Org Workspace</h1>
-            <p className="text-blue-100 text-sm">
-              Supervise multi-tenant directories, monitor leaves & clock logs, process payroll systems, and configure layout configurators.
+  const filteredProfiles = allLoginProfiles.filter(
+    (p) => (p.department || "Unassigned") === selectedDepartment,
+  );
+
+  // Filter in UI to only show CHRO view under HR department
+  const displayedUniqueDepts = uniqueDepartments.filter((dept) => dept === "Human Resources");
+  const displayedProfiles = filteredProfiles.filter((p) => p.role === "org_admin");
+
+  return (
+    <div className="min-h-screen w-full bg-zinc-50 dark:bg-zinc-950 flex flex-col">
+      {/* Top Navigation Bar */}
+      <header className="sticky top-0 z-10 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 px-4 md:px-6 h-16 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setMenuOpen(true)}
+            className="md:hidden p-2 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold text-lg shadow-sm">
+              O
+            </div>
+            <span className="font-bold text-zinc-900 dark:text-zinc-50">
+              Org Control
+            </span>
+          </div>
+        </div>
+        <div className="hidden md:flex items-center gap-3">
+          <Link href="/register">
+            <Button
+              variant="outline"
+              className="h-9 gap-1.5 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/50 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+            >
+              <Plus className="h-4 w-4" />
+              Org Register
+            </Button>
+          </Link>
+          <Link href="/auth/org">
+            <Button
+              variant="outline"
+              className="h-9 gap-1.5 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-900/50 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+            >
+              <LogIn className="h-4 w-4" />
+              Org Login
+            </Button>
+          </Link>
+          <Link href="/auth/admin">
+            <Button
+              variant="outline"
+              className="h-9 gap-1.5 text-red-700 dark:text-red-400 border-red-200 dark:border-red-900/50 hover:bg-red-50 dark:hover:bg-red-950/30"
+            >
+              <ShieldAlert className="h-4 w-4" />
+              Admin Login
+            </Button>
+          </Link>
+        </div>
+      </header>
+
+      {/* Mobile Drawer */}
+      {/* Backdrop */}
+      <div
+        className={`fixed inset-0 z-30 bg-black/40 backdrop-blur-xs transition-opacity duration-300 md:hidden ${
+          menuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        }`}
+        onClick={() => setMenuOpen(false)}
+      />
+
+      {/* Drawer Panel */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 w-64 border-r border-zinc-200 bg-white dark:border-zinc-850 dark:bg-zinc-950 transition-transform duration-300 transform md:hidden ${
+          menuOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="flex h-full flex-col px-4 py-6">
+          <div className="flex items-center justify-between mb-8 px-2">
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold text-lg shadow-sm">
+                O
+              </div>
+              <span className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+                Org Control
+              </span>
+            </div>
+            <button
+              onClick={() => setMenuOpen(false)}
+              className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-500 transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="flex-1">
+            <p className="text-xs text-zinc-400 font-medium px-2 uppercase tracking-wider mb-4">
+              Simulation Portal
+            </p>
+            <div className="px-2 py-2 bg-zinc-50 dark:bg-zinc-900/50 rounded-xl border border-zinc-150 dark:border-zinc-850 text-xs text-zinc-500 leading-relaxed">
+              Use the Simulation Sandbox on the main screen to sign in with mock roles.
+            </div>
+          </div>
+
+          {/* Moved buttons at the bottom of the sidebar */}
+          <div className="mt-auto border-t border-zinc-200 pt-4 dark:border-zinc-800 space-y-3">
+            <Link href="/register" onClick={() => setMenuOpen(false)} className="block w-full">
+              <Button
+                variant="outline"
+                className="w-full justify-start h-10 gap-2 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/50"
+              >
+                <Plus className="h-4 w-4" />
+                Org Register
+              </Button>
+            </Link>
+            <Link href="/auth/org" onClick={() => setMenuOpen(false)} className="block w-full">
+              <Button
+                variant="outline"
+                className="w-full justify-start h-10 gap-2 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-900/50"
+              >
+                <LogIn className="h-4 w-4" />
+                Org Login
+              </Button>
+            </Link>
+            <Link href="/auth/admin" onClick={() => setMenuOpen(false)} className="block w-full">
+              <Button
+                variant="outline"
+                className="w-full justify-start h-10 gap-2 text-red-700 dark:text-red-400 border-red-200 dark:border-red-900/50"
+              >
+                <ShieldAlert className="h-4 w-4" />
+                Admin Login
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </aside>
+
+      <main className="flex-1 flex flex-col justify-center items-center p-4">
+        <div className="w-full max-w-4xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xl p-8 space-y-6">
+          <div className="text-center space-y-2 mb-6">
+            <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-50 flex items-center justify-center gap-2">
+              <Building2 className="h-5 w-5 text-zinc-400" />
+              Simulation Sandbox
+            </h2>
+            <p className="text-sm text-zinc-505 max-w-lg mx-auto">
+              Select a mock profile card below to sign in instantly with
+              specialized permissions. These are purely for testing UI layout
+              renders.
             </p>
           </div>
-        </div>
 
-        {/* Global Summary Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm flex items-center justify-between">
-            <div className="space-y-1">
-              <span className="text-xs text-zinc-400 font-bold block">Workforce Headcount</span>
-              <h3 className="text-2xl font-bold text-zinc-850 dark:text-zinc-100">{totalStaffCount} Employees</h3>
-              <span className="text-xxs text-zinc-400 font-medium">All active scopes</span>
+          {isLoading ? (
+            <div className="flex justify-center items-center py-12 w-full text-zinc-500 text-sm">
+              Loading active employee directories...
             </div>
-            <div className="p-3 bg-blue-50 text-blue-600 rounded-lg"><Users className="h-5 w-5" /></div>
-          </div>
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm flex items-center justify-between">
-            <div className="space-y-1">
-              <span className="text-xs text-zinc-400 font-bold block">Active Divisions</span>
-              <h3 className="text-2xl font-bold text-zinc-850 dark:text-zinc-100">{totalDeptsCount} Departments</h3>
-              <span className="text-xxs text-zinc-400 font-medium">Auto-synced</span>
-            </div>
-            <div className="p-3 bg-indigo-50 text-indigo-600 rounded-lg"><Building className="h-5 w-5" /></div>
-          </div>
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm flex items-center justify-between">
-            <div className="space-y-1">
-              <span className="text-xs text-zinc-400 font-bold block">Leave Queue</span>
-              <h3 className="text-2xl font-bold text-zinc-850 dark:text-zinc-100">3 Pending</h3>
-              <span className="text-xxs text-amber-500 font-bold">Needs approval</span>
-            </div>
-            <div className="p-3 bg-amber-50 text-amber-600 rounded-lg"><CalendarCheck2 className="h-5 w-5" /></div>
-          </div>
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm flex items-center justify-between">
-            <div className="space-y-1">
-              <span className="text-xs text-zinc-400 font-bold block">Active Clock-ins</span>
-              <h3 className="text-2xl font-bold text-zinc-850 dark:text-zinc-100">{employees?.filter((e: any) => e.clockedIn).length || 0} Clocked In</h3>
-              <span className="text-xxs text-emerald-500 font-bold">Uptime verified</span>
-            </div>
-            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-lg"><Clock className="h-5 w-5" /></div>
-          </div>
-        </div>
-
-        {/* HR Dashboard Live Layout Preview Widget */}
-        <div className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 rounded-2xl p-6 space-y-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-200/60 pb-4">
-            <div className="space-y-1">
-              <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-50 flex items-center gap-2">
-                <Settings className="h-5 w-5 text-blue-600 animate-spin-slow" />
-                Department Dashboard Layout Live Preview Sandbox
-              </h2>
-              <p className="text-xs text-zinc-500 leading-relaxed">
-                Choose any active department below to preview and test the exact visual dashboard configured for that team division.
-              </p>
-            </div>
-
-            {/* Department Preview Selector */}
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-zinc-500 whitespace-nowrap">Preview Active Board:</span>
-              <select
-                value={adminDeptPreview}
-                onChange={(e) => setAdminDeptPreview(e.target.value)}
-                className="px-3 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900 text-xs focus:outline-none font-bold focus:ring-1 focus:ring-blue-500 text-zinc-850 dark:text-zinc-100"
-              >
-                {departments?.map((d: any) => (
-                  <option key={d._id || d.id} value={d.name}>
-                    {d.name} Layout
-                  </option>
+          ) : !selectedDepartment ? (
+            <div className="space-y-4 w-full animate-fade-in">
+              <h3 className="text-sm font-bold text-zinc-800 dark:text-zinc-200 text-center mb-4">
+                Select a Department
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {displayedUniqueDepts.map((dept) => (
+                  <div
+                    key={dept}
+                    onClick={() => setSelectedDepartment(dept)}
+                    className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:border-blue-500 hover:shadow-md cursor-pointer transition-all flex items-center gap-3 bg-white dark:bg-zinc-950 group"
+                  >
+                    <div className="p-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg group-hover:scale-105 transition-transform">
+                      <Building2 className="h-5 w-5" />
+                    </div>
+                    <h4 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">
+                      {dept}
+                    </h4>
+                  </div>
                 ))}
-              </select>
-            </div>
-          </div>
-
-          {activePreviewDept ? (
-            <div className="space-y-6">
-              {/* Preview Info Tag */}
-              <div className="bg-white dark:bg-zinc-900 border border-zinc-150 dark:border-zinc-800 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <span className="text-xs text-zinc-400 font-bold block uppercase tracking-wider">Previewing Layout Mode:</span>
-                  <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-50 flex items-center gap-1.5">
-                    <Building className="h-4.5 w-4.5 text-blue-600" />
-                    {activePreviewDept.name} Department Workspace
-                  </h3>
-                </div>
-
-                <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 text-xs font-semibold text-zinc-500">
-                  <div className="flex justify-between gap-4">
-                    <span>Oversight Head:</span>
-                    <span className="text-blue-600 dark:text-blue-400">{previewHeadNames}</span>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <span>Sub-team Blocks:</span>
-                    <span className="text-zinc-800 dark:text-zinc-200">{activePreviewDept.managers?.length || 0} Managers</span>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <span>Annual Budget Cap:</span>
-                    <span className="text-zinc-800 dark:text-zinc-200 font-mono">₹{activePreviewDept.budget?.annual?.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <span>Enabled Modules:</span>
-                    <span className="text-violet-600 font-bold">{activePreviewDept.enabledWidgets?.length || 0} Widgets</span>
-                  </div>
-                </div>
               </div>
-
-              {/* Dynamic Mounted Widgets Render */}
-              {activePreviewDept.enabledWidgets && activePreviewDept.enabledWidgets.length > 0 ? (
-                <div className="space-y-6">
-                  {activePreviewDept.enabledWidgets.map((widgetId: string) => {
-                    const modDef = modulesList?.find((m: any) => m._id === widgetId || m.id === widgetId);
-                    if (!modDef) return null;
-                    return (
-                      <DynamicModuleCard
-                        key={widgetId}
-                        moduleDef={modDef}
-                        hierarchyLabel="Preview Mode (Lead Elevated)"
-                        isLead={true}
-                      />
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-16 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl bg-white text-zinc-400 text-xs">
-                  No active dashboard widgets are currently enabled for the "{activePreviewDept.name}" department.
-                  <div className="mt-2 text-xxs font-medium text-zinc-400">
-                    Navigate to the <Link href="/employees" className="text-blue-600 underline font-bold">Dashboard Configurator</Link> workspace to activate widgets and map team trees!
-                  </div>
-                </div>
-              )}
             </div>
           ) : (
-            <div className="text-center py-12 text-zinc-400 text-xs">Loading preview specifications...</div>
+            <div className="w-full space-y-4 animate-fade-in">
+              <div className="flex items-center gap-2 mb-4">
+                <button
+                  onClick={() => setSelectedDepartment(null)}
+                  className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-500 transition-colors"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </button>
+                <h3 className="text-sm font-bold text-zinc-800 dark:text-zinc-200">
+                  {selectedDepartment} Employees
+                </h3>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {displayedProfiles.map((preset) => (
+                  <div
+                    key={preset.email}
+                    onClick={() => handleLogin(preset)}
+                    className={`p-4 rounded-xl border border-dashed hover:border-solid hover:shadow-md cursor-pointer transition-all flex items-start gap-4 ${preset.color} ${
+                      preset.role === "platform_admin" ? "md:col-span-2" : ""
+                    }`}
+                  >
+                    <div className="p-2 bg-white dark:bg-zinc-900 rounded-lg shrink-0 shadow-sm border border-zinc-150 dark:border-zinc-800">
+                      <preset.icon className="h-5 w-5" />
+                    </div>
+                    <div className="space-y-1 overflow-hidden">
+                      <h4 className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">
+                        {preset.name}
+                      </h4>
+                      <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 truncate">
+                        {preset.position}
+                      </p>
+                      <p className="text-xs text-zinc-500 font-medium truncate">
+                        {preset.email}
+                      </p>
+                      <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed line-clamp-2">
+                        {preset.desc}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
-        </div>
-      </div>
-    );
-  }
 
-  // ----------------------------------------------------
-  // GENERAL DEPARTMENT STAFF (ENGINEER / SALES / FINANCE) VIEW
-  // ----------------------------------------------------
-  if (user?.role === "employee" && user?.department) {
-    const isWidgetEnabled = (widgetId: string) => {
-      return userDept?.enabledWidgets?.includes(widgetId) || false;
-    };
-
-    return (
-      <div className="space-y-8 animate-fade-in">
-        {/* Employee Welcome Banner */}
-        <div className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-2xl p-6 md:p-8 shadow-md relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-8 opacity-10">
-            <Award className="h-48 w-48 rotate-12" />
-          </div>
-          <div className="max-w-2xl relative z-10">
-            <h1 className="text-3xl font-extrabold tracking-tight mb-2">Namaste, {user.name}!</h1>
-            <p className="text-violet-100 text-sm mb-6 leading-relaxed">
-              Welcome to your dedicated department workspace. Below are the customized active dashboard cards configured for the **{user.department}** department.
+          <div className="mt-8 pt-6 border-t border-zinc-100 dark:border-zinc-800 text-center text-xs text-zinc-400">
+            <p>
+              Role permissions are enforced logically at the front-end layout
+              and server layers.
             </p>
-
-            {/* Hierarchy Badge Card */}
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-violet-850/50 rounded-lg border border-violet-500/35 text-xs font-semibold">
-              <UserCheck className="h-4 w-4 text-violet-300" />
-              <span>Role Privilege: {hierarchyLabel}</span>
-            </div>
           </div>
         </div>
-
-        {/* Dynamic Mounted Widgets Render */}
-        {userDept?.enabledWidgets && userDept.enabledWidgets.length > 0 ? (
-          <div className="space-y-6">
-            {userDept.enabledWidgets.map((widgetId: string) => {
-              const modDef = modulesList?.find((m: any) => m._id === widgetId || m.id === widgetId);
-              if (!modDef) return null;
-              return (
-                <DynamicModuleCard
-                  key={widgetId}
-                  moduleDef={modDef}
-                  hierarchyLabel={hierarchyLabel}
-                  isLead={isLead}
-                />
-              );
-            })}
-          </div>
-        ) : (
-          <div className="text-center py-20 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900 text-zinc-400 text-xs">
-            No active dashboard modules are currently configured for your department ("{user.department}").
-            <div className="mt-2 text-xxs font-medium text-zinc-400">
-              Please contact your HR Administrator (Sahil) to activate widgets and map team trees under the configurator workspace!
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // ----------------------------------------------------
-  // GENERAL FALLBACK IF ROLE NOT RESOLVED
-  // ----------------------------------------------------
-  return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="text-center py-20 border border-zinc-200 rounded-xl bg-white space-y-4">
-        <h2 className="text-xl font-bold">Establishing Workspace Session...</h2>
-        <p className="text-sm text-zinc-400">Resolving organizational credentials from MongoDB.</p>
-        <Link href="/login" className="text-xs font-semibold px-4 py-2 bg-blue-600 text-white rounded-lg inline-block">
-          Go to Authentication PRESSETS
-        </Link>
-      </div>
+      </main>
     </div>
   );
 }

@@ -1,9 +1,11 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface IDepartment extends Document {
-  orgId: string;
+  orgId: mongoose.Types.ObjectId;
+  slug?: string;
   name: string;
   description?: string;
+  isPredefined?: boolean;
   headIds: string[]; // Supports multiple leadership heads in each department
   parentDepartmentId?: Schema.Types.ObjectId | null;
   budget: {
@@ -14,7 +16,7 @@ export interface IDepartment extends Document {
     managerId: string;
     memberIds: string[];
   }[];
-  enabledWidgets?: string[];
+
   status: "active" | "inactive";
   createdAt: Date;
   updatedAt: Date;
@@ -22,9 +24,11 @@ export interface IDepartment extends Document {
 
 const DepartmentSchema: Schema = new Schema<IDepartment>(
   {
-    orgId: { type: String, required: true, index: true },
+    orgId: { type: Schema.Types.ObjectId, ref: "Organization", required: true, index: true },
+    slug: { type: String, index: true },
     name: { type: String, required: true },
     description: { type: String },
+    isPredefined: { type: Boolean, default: true },
     headIds: { type: [String], default: [] }, // Array of leader employee IDs
     parentDepartmentId: { type: Schema.Types.ObjectId, ref: "Department", default: null },
     budget: {
@@ -38,7 +42,7 @@ const DepartmentSchema: Schema = new Schema<IDepartment>(
       }],
       default: [],
     },
-    enabledWidgets: { type: [String], default: [] },
+
     status: { type: String, enum: ["active", "inactive"], default: "active" },
   },
   {

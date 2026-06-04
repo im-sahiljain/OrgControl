@@ -80,13 +80,13 @@ export default function AICopilotPage() {
         }
       } else {
         if (query.includes("budget") || query.includes("salary")) {
-          reply = "Analyzing payroll data... The current aggregate monthly salary spend for standard 'org_default' is approximately ₹3,40,000 across active departments (Engineering, Design). Budget configurations are safe and well below the threshold.";
+          reply = `Analyzing payroll data... The current aggregate monthly salary spend for organization (${user?.orgId || "Org Technologies"}) is approximately ₹18,50,000 across active departments (Engineering, HR, Sales, Finance). Budget configurations are safe and well below the threshold.`;
         } else if (query.includes("clock") || query.includes("in")) {
-          reply = "Querying live timesheet registers... The system reports that 1 out of 2 employees is currently clocked in ('Active Duty'). General shift configurations are matching compliance specifications perfectly.";
+          reply = "Querying live timesheet registers... The system reports that active employees are currently clocked in ('Active Duty') according to shift schedules. General shift configurations are matching compliance specifications perfectly.";
         } else if (query.includes("cap") || query.includes("exceed") || query.includes("department")) {
-          reply = "Scanning department allocations... Engineering has aggregate allocations of ₹2,20,000 against a budget cap of ₹5,00,000. Design has aggregate allocations of ₹1,20,000 against a budget cap of ₹3,00,000. Zero departments are currently exceeding their allocated financial caps.";
+          reply = "Scanning department allocations... Engineering, HR, Sales, and Finance allocations are within their respective budget caps. Zero departments are currently exceeding their allocated financial caps.";
         } else {
-          reply = `I processed your request: "${text}". Mongoose multi-tenant isolation restricts this semantic scan strictly to scope 'org_default'. The directories report clean compliance and zero anomalies. Let me know if you would like me to compile details!`;
+          reply = `I processed your request: "${text}". Mongoose multi-tenant isolation restricts this semantic scan strictly to organization scope: ${user?.orgId || "Org Technologies"}. The directories report clean compliance and zero anomalies. Let me know if you would like me to compile details!`;
         }
       }
 

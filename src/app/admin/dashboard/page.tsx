@@ -1,52 +1,79 @@
 "use client";
 
 import React, { useState } from "react";
-import { Cpu, ShieldCheck, CheckCircle2, AlertCircle, Play, Ban, RefreshCcw, TrendingUp } from "lucide-react";
+
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
+import { Cpu, ShieldCheck, CheckCircle2, AlertCircle, Play, Ban, Building2, User, Mail, Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 export default function SaasMakerPage() {
-  const [tenants, setTenants] = useState<any[]>([
-    { id: "org_1", name: "Acme Corporation", slug: "acme-corp", plan: "Professional", status: "active", employees: 42 },
-    { id: "org_2", name: "Globex Inc", slug: "globex", plan: "Starter", status: "active", employees: 12 },
-    { id: "org_3", name: "Initech", slug: "initech", plan: "Enterprise", status: "suspended", employees: 88 },
-  ]);
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ["adminDashboard"],
+    queryFn: async () => {
+      const response = await axios.get("/api/admin/dashboard");
+      return response.data.data;
+    },
+  });
 
-  const toggleTenantStatus = (id: string) => {
-    setTenants((prev) =>
-      prev.map((t) => {
-        if (t.id === id) {
-          const nextStatus = t.status === "active" ? "suspended" : "active";
-          alert(`Organization ${t.name} state successfully changed to: ${nextStatus.toUpperCase()}. Cached session keys invalidated.`);
-          return { ...t, status: nextStatus };
-        }
-        return t;
-      })
-    );
+  const toggleTenantStatus = async (id: string, currentStatus: string) => {
+    try {
+      const nextStatus = currentStatus === "active" ? "suspended" : "active";
+      await axios.post("/api/admin/tenants/status", {
+        orgId: id,
+        status: nextStatus,
+      });
+      alert(`Tenant status successfully changed to: ${nextStatus.toUpperCase()}`);
+      refetch();
+    } catch (err: any) {
+      alert("Failed to update tenant status: " + (err.response?.data?.error || err.message));
+    }
   };
 
-  const metrics = [
-    { title: "Global MRR (Recurring)", value: "₹2,45,000.00", change: "+12.4% vs last month" },
-    { title: "Total Registered Orgs", value: tenants.length, change: "All isolated via Mongoose RLS" },
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px] text-red-500">
+        Failed to load platform metrics.
+      </div>
+    );
+  }
+
+  const { metrics, tenants } = data;
+
+  const displayMetrics = [
+    { title: "Global MRR (Recurring)", value: `₹${metrics.globalMrr.toLocaleString()}`, change: "+12.4% vs last month" },
+    { title: "Total Registered Orgs", value: metrics.totalOrgs, change: "All isolated via Mongoose RLS" },
     { title: "Active Connection Pools", value: "3 / 10 max", change: "dbConnect serverless optimized" },
-    { title: "Active Subscribers", value: tenants.filter((t) => t.status === "active").length, change: "1 Suspended tenant" },
+    { title: "Active Subscribers", value: metrics.activeSubscribers, change: `${metrics.suspendedSubscribers} Suspended tenant(s)` },
   ];
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 flex items-center gap-2">
-          <Cpu className="h-6 w-6 text-sky-500" />
-          SaaS Maker Administration Panel
-        </h1>
-        <p className="text-sm text-zinc-500">
-          Global platform supervisor dashboard. Monitor cluster metrics, supervise tenants, and enforce subscription status rules.
-        </p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 flex items-center gap-2">
+            <Cpu className="h-6 w-6 text-sky-500" />
+            SaaS Maker Administration Panel
+          </h1>
+          <p className="text-sm text-zinc-500">
+            Global platform supervisor dashboard. Monitor cluster metrics, supervise tenants, and enforce subscription status rules.
+          </p>
+        </div>
       </div>
 
       {/* Global Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {metrics.map((m) => (
+        {displayMetrics.map((m) => (
           <div
             key={m.title}
             className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm"
@@ -74,7 +101,7 @@ export default function SaasMakerPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-              {tenants.map((t) => (
+              {tenants.map((t: any) => (
                 <tr key={t.id} className="text-zinc-700 dark:text-zinc-300">
                   <td className="py-4 font-semibold text-zinc-900 dark:text-zinc-50">{t.name}</td>
                   <td className="py-4">
@@ -104,7 +131,7 @@ export default function SaasMakerPage() {
                     <Button
                       variant={t.status === "active" ? "destructive" : "default"}
                       size="sm"
-                      onClick={() => toggleTenantStatus(t.id)}
+                      onClick={() => toggleTenantStatus(t.id, t.status)}
                       className={`inline-flex items-center gap-1 text-xs font-semibold ${
                         t.status !== "active"
                           ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
