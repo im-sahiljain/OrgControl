@@ -28,6 +28,8 @@ import type { RootState } from "../reduxToolkit/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import DepartmentFeatureCard from "../components/DepartmentFeatureCard";
+import UnscreenedResumesWidget from "../components/UnscreenedResumesWidget";
+import ResumeReviewDashboardWidget from "../components/ResumeReviewDashboardWidget";
 import { resolveDepartmentRole, getVisibleFeatures, getRoleLabel, getDataScope, getFeatureAccessLevel } from "@/lib/roleResolver";
 import { getFeatureById, getDefaultFeatureIdsForDept } from "@/lib/departmentRegistry";
 
@@ -41,6 +43,7 @@ export default function Dashboard() {
       const res = await axios.get(`/api/employees?orgId=${user?.orgId}`);
       return res.data.data || [];
     },
+    enabled: !!user?.orgId,
   });
 
   // Fetch departments list
@@ -50,17 +53,26 @@ export default function Dashboard() {
       const res = await axios.get(`/api/departments?orgId=${user?.orgId}`);
       return res.data.data || [];
     },
+    enabled: !!user?.orgId,
+  });
+
+  // Fetch organizations list for platform admin
+  const { data: organizations } = useQuery({
+    queryKey: ["organizations"],
+    queryFn: async () => {
+      const res = await axios.get("/api/organizations");
+      return res.data.data || [];
+    },
+    enabled: user?.role === "platform_admin",
   });
 
   // HR Admin preview control state
   const [adminDeptPreview, setAdminDeptPreview] = useState<string>("");
 
-  // Auto-initialize first department preview for HR Admins
+  // Auto-initialize department preview for HR Admins to Human Resources
   useEffect(() => {
-    if (departments && departments.length > 0 && !adminDeptPreview) {
-      setAdminDeptPreview(departments[0].name);
-    }
-  }, [departments]);
+    setAdminDeptPreview("Human Resources");
+  }, []);
 
   // ----------------------------------------------------
   // INTERACTIVE MOCK STATE TRIGGERS FOR WIDGETS
@@ -173,7 +185,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm">
             <span className="text-xs text-zinc-400 font-bold block mb-1">Global Active Tenants</span>
-            <h3 className="text-2xl font-bold text-zinc-900 dark:text-zinc-55">14 Organizations</h3>
+            <h3 className="text-2xl font-bold text-zinc-900 dark:text-zinc-55">{organizations?.length || 0} Organizations</h3>
             <span className="text-xxs text-emerald-500 font-semibold block mt-1.5">✓ All system modules operational</span>
           </div>
           <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm">
@@ -195,35 +207,32 @@ export default function Dashboard() {
           </h3>
           <div className="border border-zinc-150 dark:border-zinc-850 rounded-xl overflow-hidden text-xs">
             <div className="bg-zinc-50 dark:bg-zinc-950 p-3 border-b border-zinc-150 dark:border-zinc-850 font-bold text-zinc-500 flex justify-between">
-              <span>Organization Tenant ID</span>
+              <span>Organization Tenant Name (ID)</span>
               <span>Status Gate</span>
             </div>
-            <div className="p-3.5 bg-white dark:bg-zinc-900 flex justify-between items-center border-b border-zinc-100 dark:border-zinc-850">
-              <div>
-                <span className="font-bold block text-zinc-800 dark:text-zinc-200">org_default (Mock Enterprise)</span>
-                <span className="text-xxs text-zinc-400 block mt-0.5">Timezone: Asia/Kolkata (IST)</span>
-              </div>
-              <span className="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-full font-bold text-xxs">Active</span>
-            </div>
-            <div className="p-3.5 bg-white dark:bg-zinc-900 flex justify-between items-center">
-              <div>
-                <span className="font-bold block text-zinc-800 dark:text-zinc-200">org_finance_test (Mock Finance Corp)</span>
-                <span className="text-xxs text-zinc-400 block mt-0.5">Timezone: Asia/Kolkata (IST)</span>
-              </div>
-              <span className="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-full font-bold text-xxs">Active</span>
-            </div>
+            {organizations && organizations.length > 0 ? (
+              organizations.map((org: any) => (
+                <div key={org._id} className="p-3.5 bg-white dark:bg-zinc-900 flex justify-between items-center border-b border-zinc-100 dark:border-zinc-850 last:border-b-0">
+                  <div>
+                    <span className="font-bold block text-zinc-800 dark:text-zinc-200">{org.name} ({org.slug})</span>
+                    <span className="text-xxs text-zinc-400 block mt-0.5">Admin: {org.adminEmail} | Plan: {org.plan}</span>
+                  </div>
+                  <span className={`px-2 py-1 rounded-full font-bold text-xxs ${
+                    org.status === 'active' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
+                  }`}>{org.status}</span>
+                </div>
+              ))
+            ) : (
+              <div className="p-4 text-center text-zinc-400 italic">No organizations found in database.</div>
+            )}
           </div>
         </div>
       </div>
     );
   }
 
-  // Find department of active user in database
   const userDept = departments?.find((d: any) => d.name === user?.department);
-  const activeUserId = user?.id || "mock_aarav";
-
-  // Determine hierarchy labels and roles using the new utility
-  const roleContext = resolveDepartmentRole(userDept, activeUserId);
+  const roleContext = resolveDepartmentRole(userDept, user?.id || "");
   const roleLabel = getRoleLabel(roleContext.role);
   const dataScope = getDataScope(roleContext.role);
   const isLead = roleContext.role === "department_head" || roleContext.role === "team_manager";
@@ -254,44 +263,13 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Global Summary Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm flex items-center justify-between">
-            <div className="space-y-1">
-              <span className="text-xs text-zinc-400 font-bold block">Workforce Headcount</span>
-              <h3 className="text-2xl font-bold text-zinc-850 dark:text-zinc-100">{totalStaffCount} Employees</h3>
-              <span className="text-xxs text-zinc-400 font-medium">All active scopes</span>
-            </div>
-            <div className="p-3 bg-blue-50 text-blue-600 rounded-lg"><Users className="h-5 w-5" /></div>
-          </div>
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm flex items-center justify-between">
-            <div className="space-y-1">
-              <span className="text-xs text-zinc-400 font-bold block">Active Divisions</span>
-              <h3 className="text-2xl font-bold text-zinc-850 dark:text-zinc-100">{totalDeptsCount} Departments</h3>
-              <span className="text-xxs text-zinc-400 font-medium">Auto-synced</span>
-            </div>
-            <div className="p-3 bg-indigo-50 text-indigo-600 rounded-lg"><Building className="h-5 w-5" /></div>
-          </div>
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm flex items-center justify-between">
-            <div className="space-y-1">
-              <span className="text-xs text-zinc-400 font-bold block">Leave Queue</span>
-              <h3 className="text-2xl font-bold text-zinc-850 dark:text-zinc-100">3 Pending</h3>
-              <span className="text-xxs text-amber-500 font-bold">Needs approval</span>
-            </div>
-            <div className="p-3 bg-amber-50 text-amber-600 rounded-lg"><CalendarCheck2 className="h-5 w-5" /></div>
-          </div>
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm flex items-center justify-between">
-            <div className="space-y-1">
-              <span className="text-xs text-zinc-400 font-bold block">Active Clock-ins</span>
-              <h3 className="text-2xl font-bold text-zinc-850 dark:text-zinc-100">{employees?.filter((e: any) => e.clockedIn).length || 0} Clocked In</h3>
-              <span className="text-xxs text-emerald-500 font-bold">Uptime verified</span>
-            </div>
-            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-lg"><Clock className="h-5 w-5" /></div>
-          </div>
-        </div>
+        {/* Resume Review Workspace Metrics */}
+        {user?.orgId && <ResumeReviewDashboardWidget orgId={user.orgId} />}
+
+        {user?.orgId && <UnscreenedResumesWidget orgId={user.orgId} />}
 
         {/* HR Dashboard Live Layout Preview Widget */}
-        <div className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 rounded-2xl p-6 space-y-6">
+        <div className="hidden bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 rounded-2xl p-6 space-y-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-200/60 pb-4">
             <div className="space-y-1">
               <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-50 flex items-center gap-2">
@@ -303,8 +281,8 @@ export default function Dashboard() {
               </p>
             </div>
 
-            {/* Department Preview Selector */}
-            <div className="flex items-center gap-2">
+            {/* Department Preview Selector (Hidden in UI to enforce CHRO HR view) */}
+            <div className="hidden flex items-center gap-2">
               <span className="text-xs font-bold text-zinc-500 whitespace-nowrap">Preview Active Board:</span>
               <select
                 value={adminDeptPreview}
@@ -348,7 +326,7 @@ export default function Dashboard() {
                   <div className="flex justify-between gap-4">
                     <span>Features & Modules:</span>
                     <span className="text-violet-600 font-bold">
-                      {new Set([...(activePreviewDept.enabledWidgets || []), ...getDefaultFeatureIdsForDept(activePreviewDept.slug)]).size} Active
+                      {getDefaultFeatureIdsForDept(activePreviewDept.slug).filter(id => getFeatureById(id)?.implemented).length} Active
                     </span>
                   </div>
                 </div>
@@ -356,7 +334,7 @@ export default function Dashboard() {
 
               {/* Dynamic Mounted Widgets Render */}
               {(() => {
-                const combinedWidgets = Array.from(new Set([...(activePreviewDept.enabledWidgets || []), ...getDefaultFeatureIdsForDept(activePreviewDept.slug)]));
+                const combinedWidgets = getDefaultFeatureIdsForDept(activePreviewDept.slug);
                 if (combinedWidgets.length === 0) {
                   return (
                     <div className="text-center py-16 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl bg-white text-zinc-400 text-xs">
@@ -367,21 +345,19 @@ export default function Dashboard() {
                 return (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {combinedWidgets.map((widgetId: string) => {
-                    // Check if it's a predefined feature
                     const predefinedFeature = getFeatureById(widgetId);
-                    if (predefinedFeature) {
-                      const accessLevel = getFeatureAccessLevel(predefinedFeature, "department_head"); // Preview as head
-                      return (
-                        <DepartmentFeatureCard
-                          key={widgetId}
-                          feature={predefinedFeature}
-                          accessLevel={accessLevel}
-                          dataScope="department_wide"
-                          roleLabel="Preview (Head)"
-                        />
-                      );
-                    }
-                    return null;
+                    // Only show features that have been implemented
+                    if (!predefinedFeature || !predefinedFeature.implemented) return null;
+                    const accessLevel = getFeatureAccessLevel(predefinedFeature, "department_head"); // Preview as head
+                    return (
+                      <DepartmentFeatureCard
+                        key={widgetId}
+                        feature={predefinedFeature}
+                        accessLevel={accessLevel}
+                        dataScope="department_wide"
+                        roleLabel="Preview (Head)"
+                      />
+                    );
                   })}
                 </div>
                 );
@@ -426,9 +402,13 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {(user?.department === "Human Resources" && user?.orgId) && (
+          <UnscreenedResumesWidget orgId={user.orgId} />
+        )}
+
         {/* Dynamic Mounted Widgets Render */}
         {(() => {
-          const combinedWidgets = Array.from(new Set([...(userDept?.enabledWidgets || []), ...getDefaultFeatureIdsForDept(userDept?.slug)]));
+          const combinedWidgets = getDefaultFeatureIdsForDept(userDept?.slug);
           if (combinedWidgets.length === 0) {
             return (
               <div className="text-center py-20 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-900 text-zinc-400 text-xs">
@@ -442,24 +422,22 @@ export default function Dashboard() {
           return (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {combinedWidgets.map((widgetId: string) => {
-              // Check if it's a predefined feature
               const predefinedFeature = getFeatureById(widgetId);
-              if (predefinedFeature) {
-                const accessLevel = getFeatureAccessLevel(predefinedFeature, roleContext.role);
-                // Hide features that the user has 'none' access to completely
-                if (accessLevel === "none") return null;
+              // Only show features that have been implemented
+              if (!predefinedFeature || !predefinedFeature.implemented) return null;
+              const accessLevel = getFeatureAccessLevel(predefinedFeature, roleContext.role);
+              // Hide features that the user has 'none' access to completely
+              if (accessLevel === "none") return null;
 
-                return (
-                  <DepartmentFeatureCard
-                    key={widgetId}
-                    feature={predefinedFeature}
-                    accessLevel={accessLevel}
-                    dataScope={dataScope}
-                    roleLabel={roleLabel}
-                  />
-                );
-              }
-                    return null;
+              return (
+                <DepartmentFeatureCard
+                  key={widgetId}
+                  feature={predefinedFeature}
+                  accessLevel={accessLevel}
+                  dataScope={dataScope}
+                  roleLabel={roleLabel}
+                />
+              );
             })}
           </div>
           );

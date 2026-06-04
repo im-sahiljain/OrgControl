@@ -3,7 +3,6 @@ import dbConnect from "@/lib/dbConnect";
 import Organization from "@/models/Organization";
 import Employee from "@/models/Employee";
 import Department from "@/models/Department";
-import { getDefaultFeatureIdsForDept } from "@/lib/departmentRegistry";
 
 export async function POST(req: Request) {
   try {
@@ -37,23 +36,23 @@ export async function POST(req: Request) {
       status: "active",
     });
 
-    const orgId = newOrg.slug; // We'll use the slug as the orgId for our multi-tenant logic
+    const orgId = newOrg._id; // Use the document ObjectId, not slug
 
     // 2. Create the Founding Admin (HR Head)
     const adminUser = await Employee.create({
       orgId,
       empName: adminName,
-      empAge: 30, // Default placeholder
+      empAge: 30,
       empPosition: "CHRO (Head of HR)",
       email: adminEmail,
-      password, // Save password to database
+      password,
       department: "Human Resources",
       status: "active",
       salary: 0,
       clockedIn: false,
     });
 
-    // 3. Initialize a default Human Resources department for them
+    // 3. Initialize a default Human Resources department
     await Department.create({
       orgId,
       slug: "hr",
@@ -62,7 +61,6 @@ export async function POST(req: Request) {
       isPredefined: true,
       headIds: [adminUser._id.toString()],
       managers: [],
-      enabledWidgets: getDefaultFeatureIdsForDept("hr"),
       budget: { annual: 100000, currency: "INR" },
       status: "active",
     });
@@ -70,7 +68,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       message: "Organization provisioned successfully.",
-      orgId,
+      orgId: orgId.toString(),
       adminId: adminUser._id.toString(),
     });
   } catch (error: any) {

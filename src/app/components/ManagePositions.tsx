@@ -6,9 +6,12 @@ import axios from "axios";
 import { Briefcase, Loader2, Plus, Trash2, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useSelector } from "react-redux";
+import type { RootState } from "../reduxToolkit/store";
 
 export default function ManagePositions() {
   const queryClient = useQueryClient();
+  const user = useSelector((state: RootState) => state.employeeUI.user);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");

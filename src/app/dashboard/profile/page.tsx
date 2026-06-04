@@ -232,7 +232,7 @@ export default function ProfilePage() {
                 <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1 block">Salary</label>
                 <div className="flex items-center gap-2 text-zinc-800 dark:text-zinc-200 font-medium">
                   <Wallet className="h-4 w-4 text-zinc-400" />
-                  ${employeeData.salary?.toLocaleString() || "0"} / yr
+                  ₹{employeeData.salary?.toLocaleString() || "0"} / yr
                 </div>
               </div>
               

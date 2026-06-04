@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { User, UserCheck, Plus, Trash2, ChevronRight, Settings2, X } from "lucide-react";
+import { useSelector } from "react-redux";
+import type { RootState } from "../reduxToolkit/store";
 
 interface ManageDepartmentRosterProps {
   departmentId: string;
@@ -10,6 +12,7 @@ interface ManageDepartmentRosterProps {
 
 export default function ManageDepartmentRoster({ departmentId, onClose }: ManageDepartmentRosterProps) {
   const queryClient = useQueryClient();
+  const user = useSelector((state: RootState) => state.employeeUI.user);
 
   const [configHeadIds, setConfigHeadIds] = useState<string[]>([]);
   const [configManagers, setConfigManagers] = useState<{ managerId: string; memberIds: string[] }[]>([]);

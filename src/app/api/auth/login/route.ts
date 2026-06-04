@@ -46,8 +46,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // For this prototype, we use plaintext passwords (or simple comparison).
-    // In production, you would use bcrypt.compare()
     if (user.password !== password) {
       return NextResponse.json(
         { success: false, error: "Invalid credentials." },
@@ -55,8 +53,8 @@ export async function POST(req: Request) {
       );
     }
 
-    // Check organization status
-    const org = await Organization.findOne({ slug: user.orgId });
+    // Check organization status — orgId is now an ObjectId
+    const org = await Organization.findById(user.orgId);
     if (!org) {
       return NextResponse.json(
         { success: false, error: "Organization tenant not found." },
@@ -71,9 +69,11 @@ export async function POST(req: Request) {
       );
     }
 
-    // Determine the user's base role (simple logic for now)
-    // If they are head of HR, they are an org_admin. Everyone else is employee.
-    const isHrAdmin = user.department === "Human Resources" && user.empPosition.toLowerCase().includes("head");
+    // Determine the user's base role
+    const isHrAdmin = user.department === "Human Resources" && (
+      user.empPosition.toLowerCase().includes("head") || 
+      user.empPosition.toLowerCase().includes("chro")
+    );
     const role = isHrAdmin ? "org_admin" : "employee";
 
     return NextResponse.json({
@@ -83,7 +83,7 @@ export async function POST(req: Request) {
         name: user.empName,
         email: user.email,
         role: role,
-        orgId: user.orgId,
+        orgId: user.orgId.toString(),
         department: user.department,
         position: user.empPosition,
       },

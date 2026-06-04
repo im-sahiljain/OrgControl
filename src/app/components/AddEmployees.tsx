@@ -1,13 +1,16 @@
 "use client";
 
 import React, { useState, useRef } from "react";
+import { useSelector } from "react-redux";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { UserPlus, Image as ImageIcon, Loader2 } from "lucide-react";
+import type { RootState } from "../reduxToolkit/store";
 
 const AddEmployees = () => {
+  const user = useSelector((state: RootState) => state.employeeUI.user);
   const [empName, setEmpName] = useState<string>("");
   const [empAge, setEmpAge] = useState<string>("");
   const [empPosition, setEmpPosition] = useState<string>("");

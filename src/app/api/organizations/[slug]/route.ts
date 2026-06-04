@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import dbConnect from "@/lib/dbConnect";
 import Organization from "@/models/Organization";
 
@@ -11,21 +12,18 @@ export async function GET(req: Request, context: { params: Promise<{ slug: strin
 
     if (!slug) {
       return NextResponse.json(
-        { success: false, error: "Organization slug is required" },
+        { success: false, error: "Organization identifier is required" },
         { status: 400 }
       );
     }
 
-    let org = await Organization.findOne({ slug });
-
-    if (!org && slug === "org_default") {
-      org = await Organization.create({
-        name: "Acme Corporation (Demo)",
-        slug: "org_default",
-        plan: "Enterprise",
-        adminEmail: "admin@company.in",
-        status: "active"
-      });
+    // Support lookup by ObjectId or by slug
+    let org;
+    if (mongoose.Types.ObjectId.isValid(slug)) {
+      org = await Organization.findById(slug);
+    }
+    if (!org) {
+      org = await Organization.findOne({ slug });
     }
 
     if (!org) {

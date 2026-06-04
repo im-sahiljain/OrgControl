@@ -2,34 +2,29 @@ import mongoose from "mongoose";
 import * as dotenv from "dotenv";
 import path from "path";
 
-// Load env vars
+// Load env vars from .env.local
+dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 
 async function wipe() {
   const uri = process.env.MONGODB_URI;
   if (!uri) {
-    console.error("No MONGODB_URI found.");
+    console.error("MONGODB_URI is not set. Check .env.local or .env");
     process.exit(1);
   }
 
+  console.log("Connecting to MongoDB...");
   await mongoose.connect(uri);
-  console.log("Connected to MongoDB.");
+  console.log("Connected. Dropping database...");
 
-  const collections = Object.keys(mongoose.connection.collections);
-  for (const collectionName of collections) {
-    const collection = mongoose.connection.collections[collectionName];
-    try {
-      await collection.drop();
-      console.log(`Dropped collection: ${collectionName}`);
-    } catch (e: any) {
-      if (e.message === "ns not found") return;
-      if (e.message.includes("a background operation is currently running")) return;
-      console.error(`Failed to drop collection ${collectionName}: ${e.message}`);
-    }
-  }
+  await mongoose.connection.db!.dropDatabase();
+  console.log("Database dropped successfully.");
 
-  console.log("Database wiped successfully.");
-  process.exit(0);
+  await mongoose.disconnect();
+  console.log("Disconnected. Done.");
 }
 
-wipe().catch(console.error);
+wipe().catch((err) => {
+  console.error("Wipe failed:", err);
+  process.exit(1);
+});

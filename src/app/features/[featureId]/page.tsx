@@ -4,6 +4,7 @@ import { getFeatureById } from "@/lib/departmentRegistry";
 import ComingSoon from "./ComingSoon";
 import SalesPipeline from "./components/SalesPipeline";
 import HrDirectory from "./components/HrDirectory";
+import RecruitmentPipeline from "./components/RecruitmentPipeline";
 
 export default async function FeatureShell({ params }: { params: Promise<{ featureId: string }> }) {
   const resolvedParams = await params;
@@ -21,8 +22,8 @@ export default async function FeatureShell({ params }: { params: Promise<{ featu
       return <SalesPipeline feature={feature} />;
     case "hr_directory":
       return <HrDirectory feature={feature} />;
-    
-    
+    case "hr_recruitment":
+      return <RecruitmentPipeline feature={feature} />;
     
     default:
       // Graceful fallback for features that haven't been fully developed yet

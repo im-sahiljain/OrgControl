@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Department from "@/models/Department";
-import { getDepartmentBySlug, getDefaultFeatureIdsForDept } from "@/lib/departmentRegistry";
+import { getDepartmentBySlug } from "@/lib/departmentRegistry";
 
 export async function GET(req: Request) {
   try {
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
   try {
     await dbConnect();
     const body = await req.json();
-    let { orgId, slug, name, description, budget, headIds, managers, enabledWidgets } = body;
+    let { orgId, slug, name, description, budget, headIds, managers } = body;
     
     if (!orgId || !name) {
       return NextResponse.json({ success: false, error: "orgId and name are required" }, { status: 400 });
@@ -44,9 +44,6 @@ export async function POST(req: Request) {
         name = predefined.name;
         description = predefined.description;
         isPredefined = true;
-        // Merge predefined default features with any passed in widgets
-        const defaultFeatures = getDefaultFeatureIdsForDept(slug);
-        enabledWidgets = [...new Set([...(enabledWidgets || []), ...defaultFeatures])];
       }
     }
 
@@ -60,7 +57,6 @@ export async function POST(req: Request) {
       budget: budget || { annual: 50000, currency: "USD" },
       status: "active",
       managers: managers || [],
-      enabledWidgets: enabledWidgets || [],
     });
 
     return NextResponse.json({ success: true, data: department }, { status: 201 });
@@ -77,7 +73,7 @@ export async function PUT(req: Request) {
   try {
     await dbConnect();
     const body = await req.json();
-    const { id, headIds, managers, enabledWidgets, budget } = body;
+    const { id, headIds, managers, budget } = body;
 
     if (!id) {
       return NextResponse.json({ success: false, error: "Department ID is required" }, { status: 400 });
@@ -88,7 +84,6 @@ export async function PUT(req: Request) {
       {
         ...(headIds !== undefined && { headIds }),
         ...(managers !== undefined && { managers }),
-        ...(enabledWidgets !== undefined && { enabledWidgets }),
         ...(budget !== undefined && { budget }),
       },
       { new: true }

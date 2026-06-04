@@ -16,7 +16,7 @@ export interface IDepartment extends Document {
     managerId: string;
     memberIds: string[];
   }[];
-  enabledWidgets?: string[];
+
   status: "active" | "inactive";
   createdAt: Date;
   updatedAt: Date;
@@ -42,7 +42,7 @@ const DepartmentSchema: Schema = new Schema<IDepartment>(
       }],
       default: [],
     },
-    enabledWidgets: { type: [String], default: [] },
+
     status: { type: String, enum: ["active", "inactive"], default: "active" },
   },
   {

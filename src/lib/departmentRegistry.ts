@@ -18,6 +18,8 @@ export interface DepartmentFeature {
   icon: string; // Lucide icon name
   category: "dashboard_widget" | "page" | "workflow";
   access: DepartmentFeatureAccess;
+  /** true = functional page exists; false = falls back to ComingSoon and is hidden from UI */
+  implemented?: boolean;
 }
 
 export interface PredefinedDepartment {
@@ -128,6 +130,7 @@ export const DEPARTMENT_FEATURES: Record<string, DepartmentFeature[]> = {
       icon: "UserPlus",
       category: "dashboard_widget",
       access: { department_head: "full", team_manager: "operational", team_member: "view_only" },
+      implemented: true,
     },
     {
       id: "hr_onboarding",
@@ -144,6 +147,7 @@ export const DEPARTMENT_FEATURES: Record<string, DepartmentFeature[]> = {
       icon: "Contact",
       category: "page",
       access: { department_head: "full", team_manager: "operational", team_member: "view_only" },
+      implemented: true,
     },
     {
       id: "hr_leave",
@@ -310,6 +314,7 @@ export const DEPARTMENT_FEATURES: Record<string, DepartmentFeature[]> = {
       icon: "Filter",
       category: "dashboard_widget",
       access: { department_head: "full", team_manager: "operational", team_member: "view_only" },
+      implemented: true,
     },
     {
       id: "sales_quota",

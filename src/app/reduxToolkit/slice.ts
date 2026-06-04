@@ -63,35 +63,23 @@ export const employeeUISlice = createSlice({
     loginUser: (state, action: PayloadAction<UserSession>) => {
       state.isAuthenticated = true;
       state.user = action.payload;
+      if (typeof window !== "undefined") {
+        localStorage.setItem("org_control_user", JSON.stringify(action.payload));
+      }
     },
     logoutUser: (state) => {
       state.isAuthenticated = false;
       state.user = null;
-    },
-    setAuthRole: (state, action: PayloadAction<"platform_admin" | "org_admin" | "employee">) => {
-      if (state.user) {
-        state.user.role = action.payload;
-        if (action.payload === "platform_admin") {
-          state.user.name = "Platform Owner (SaaS Maker)";
-          state.user.email = "owner@saasmaker.in";
-          delete state.user.department;
-          delete state.user.position;
-        } else if (action.payload === "org_admin") {
-          state.user.name = "Sahil";
-          state.user.email = "admin@company.in";
-          state.user.department = "Human Resources";
-          state.user.position = "CHRO (Head of HR)";
-        } else {
-          state.user.name = "Aarav Sharma";
-          state.user.email = "aarav.sharma@company.in";
-          state.user.department = "Engineering";
-          state.user.position = "Senior Software Engineer";
-        }
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("org_control_user");
       }
     },
     setAuthSession: (state, action: PayloadAction<UserSession>) => {
       state.isAuthenticated = true;
       state.user = action.payload;
+      if (typeof window !== "undefined") {
+        localStorage.setItem("org_control_user", JSON.stringify(action.payload));
+      }
     },
   },
 });
@@ -102,7 +90,6 @@ export const {
   setSearchFilter,
   loginUser,
   logoutUser,
-  setAuthRole,
   setAuthSession,
 } = employeeUISlice.actions;
 

@@ -1,8 +1,10 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useSelector } from "react-redux";
 import axios from "axios";
 import { Check, Loader2, Settings, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { RootState } from "../reduxToolkit/store";
 
 export default function ManageDepartmentDashboard({ 
   departmentId, 
@@ -11,6 +13,7 @@ export default function ManageDepartmentDashboard({
   departmentId: string,
   onClose: () => void 
 }) {
+  const user = useSelector((state: RootState) => state.employeeUI.user);
   const queryClient = useQueryClient();
 
   // Fetch all available modules
@@ -22,7 +25,7 @@ export default function ManageDepartmentDashboard({
     },
   });
 
-  // Fetch current department to get its enabled widgets
+  // Fetch current department to get its data
   const { data: departments, isLoading: loadingDepts } = useQuery({
     queryKey: ["departments"],
     queryFn: async () => {
@@ -32,7 +35,7 @@ export default function ManageDepartmentDashboard({
   });
 
   const department = departments?.find((d: any) => d._id === departmentId);
-  const [selectedWidgets, setSelectedWidgets] = useState<string[]>(department?.enabledWidgets || []);
+  const [selectedWidgets, setSelectedWidgets] = useState<string[]>([]);
 
   const toggleWidget = (widgetId: string) => {
     setSelectedWidgets(prev => 

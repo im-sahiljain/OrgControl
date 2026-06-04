@@ -13,10 +13,6 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
       return NextResponse.json({ success: false, error: "orgId query parameter is required" }, { status: 400 });
     }
 
-    if (!process.env.MONGODB_URI) {
-      return NextResponse.json({ success: true, data: { _id: id, empName: "Offline Mock", status: "active", orgId } });
-    }
-
     await dbConnect();
     const employee = await Employee.findOne({ _id: id, orgId });
 
@@ -41,10 +37,6 @@ export async function PUT(req: Request, context: { params: Promise<{ id: string 
       return NextResponse.json({ success: false, error: "orgId is required in body" }, { status: 400 });
     }
 
-    if (!process.env.MONGODB_URI) {
-      return NextResponse.json({ success: true, data: { _id: id, ...body } });
-    }
-
     await dbConnect();
     const employee = await Employee.findOneAndUpdate(
       { _id: id, orgId },
@@ -66,15 +58,11 @@ export async function DELETE(req: Request, context: { params: Promise<{ id: stri
   try {
     const params = await context.params;
     const { id } = params;
-    const body = await req.json().catch(() => ({})); // Handle if body is empty
+    const body = await req.json().catch(() => ({}));
     const orgId = body.orgId;
 
     if (!orgId) {
       return NextResponse.json({ success: false, error: "orgId is required in body" }, { status: 400 });
-    }
-
-    if (!process.env.MONGODB_URI) {
-      return NextResponse.json({ success: true, message: "Employee deleted (offline)" });
     }
 
     await dbConnect();

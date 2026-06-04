@@ -6,9 +6,12 @@ import axios from "axios";
 import { LayoutGrid, Plus, Trash2, Edit2, CheckCircle2, Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useSelector } from "react-redux";
+import type { RootState } from "../reduxToolkit/store";
 
 export default function ManageModules() {
   const queryClient = useQueryClient();
+  const user = useSelector((state: RootState) => state.employeeUI.user);
   const [isEditing, setIsEditing] = useState<string | null>(null);
 
   // Form State
