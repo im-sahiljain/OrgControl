@@ -1,13 +1,14 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface IEmployee extends Document {
-  orgId: string;
+  orgId: mongoose.Types.ObjectId;
   empName: string;
   empAge: number;
   empPosition: string;
   email: string;
+  password?: string;
   profilePhoto?: string;
-  department?: string; // name or ObjectId
+  department?: string;
   status: "onboarding" | "probation" | "active" | "on_notice" | "resigned" | "terminated";
   salary: number;
   clockedIn: boolean;
@@ -23,11 +24,12 @@ export interface IEmployee extends Document {
 
 const EmployeeSchema: Schema = new Schema<IEmployee>(
   {
-    orgId: { type: String, required: true, index: true },
+    orgId: { type: Schema.Types.ObjectId, ref: "Organization", required: true, index: true },
     empName: { type: String, required: true },
     empAge: { type: Number, required: true },
     empPosition: { type: String, required: true },
     email: { type: String, required: true },
+    password: { type: String, required: false },
     profilePhoto: { type: String, default: "" },
     department: { type: String, default: "Engineering" },
     status: {

@@ -2,14 +2,82 @@ import React, { useState } from "react";
 import * as LucideIcons from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 
-export default function DynamicModuleCard({ moduleDef, hierarchyLabel, isLead }: { moduleDef: any, hierarchyLabel: string, isLead: boolean }) {
+export default function DynamicModuleCard({ 
+  moduleDef, 
+  hierarchyLabel, 
+  isLead, 
+  departmentId, 
+  user 
+}: { 
+  moduleDef: any, 
+  hierarchyLabel: string, 
+  isLead: boolean,
+  departmentId: string,
+  user: any
+}) {
   const IconComponent = (LucideIcons as any)[moduleDef.icon] || LucideIcons.Layout;
+  const queryClient = useQueryClient();
   
-  // Local state to hold the entries submitted in this module
-  const [entries, setEntries] = useState<any[]>([]);
   // Local state for the current form inputs
   const [formData, setFormData] = useState<any>({});
+
+  // Fetch entries from database
+  const { data: entriesResponse, isLoading } = useQuery({
+    queryKey: ["module-entries", moduleDef._id],
+    queryFn: async () => {
+      const res = await axios.get(`/api/module-entries?moduleId=${moduleDef._id}&orgId=${user?.orgId}`);
+      return res.data.data || [];
+    },
+  });
+
+  const entries = entriesResponse || [];
+
+  // Submit Entry Mutation
+  const submitMutation = useMutation({
+    mutationFn: async (newEntry: any) => {
+      const res = await axios.post("/api/module-entries", {
+        moduleId: moduleDef._id,
+        departmentId,
+        orgId: user?.orgId,
+        submittedBy: {
+          id: user.id,
+          name: user.name
+        },
+        data: newEntry
+      });
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["module-entries", moduleDef._id] });
+      setFormData({});
+    },
+    onError: (error) => {
+      alert("Failed to submit entry.");
+      console.error(error);
+    }
+  });
+
+  // Approve Entries Mutation (VP Action)
+  const approveMutation = useMutation({
+    mutationFn: async () => {
+      const res = await axios.put("/api/module-entries", {
+        moduleId: moduleDef._id,
+        orgId: user?.orgId,
+        action: "approve_all"
+      });
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["module-entries", moduleDef._id] });
+    },
+    onError: (error) => {
+      alert("Failed to approve entries.");
+      console.error(error);
+    }
+  });
 
   const handleInputChange = (fieldName: string, value: any) => {
     setFormData({ ...formData, [fieldName]: value });
@@ -22,9 +90,13 @@ export default function DynamicModuleCard({ moduleDef, hierarchyLabel, isLead }:
       alert("Please fill out all fields.");
       return;
     }
-    
-    setEntries([...entries, formData]);
-    setFormData({}); // Reset form
+    submitMutation.mutate(formData);
+  };
+
+  const handleApproveAll = () => {
+    if (confirm("Are you sure you want to approve all pending entries for this module?")) {
+      approveMutation.mutate();
+    }
   };
 
   // Map colors to Tailwind classes
@@ -38,6 +110,7 @@ export default function DynamicModuleCard({ moduleDef, hierarchyLabel, isLead }:
   };
 
   const theme = colorMap[moduleDef.color] || colorMap.blue;
+  const pendingCount = entries.filter((e: any) => e.status === "pending").length;
 
   return (
     <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm space-y-4 animate-fade-in">
@@ -47,9 +120,16 @@ export default function DynamicModuleCard({ moduleDef, hierarchyLabel, isLead }:
           <IconComponent className={`h-5 w-5 ${theme.text}`} />
           {moduleDef.name}
         </h3>
-        <span className={`text-xxs px-2.5 py-1 font-bold rounded-full ${theme.badge}`}>
-          Active Entries: {entries.length}
-        </span>
+        <div className="flex items-center gap-2">
+          {pendingCount > 0 && isLead && (
+            <span className="text-xxs px-2.5 py-1 font-bold rounded-full bg-rose-50 text-rose-600 border border-rose-200 animate-pulse">
+              {pendingCount} Pending Approval
+            </span>
+          )}
+          <span className={`text-xxs px-2.5 py-1 font-bold rounded-full ${theme.badge}`}>
+            Total Entries: {entries.length}
+          </span>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -65,6 +145,7 @@ export default function DynamicModuleCard({ moduleDef, hierarchyLabel, isLead }:
                     value={formData[field.name] || ""}
                     onChange={(e) => handleInputChange(field.name, e.target.value)}
                     className="h-8 text-xs bg-white dark:bg-zinc-900"
+                    disabled={submitMutation.isPending}
                   />
                 )}
                 {field.type === "number" && (
@@ -74,6 +155,7 @@ export default function DynamicModuleCard({ moduleDef, hierarchyLabel, isLead }:
                     value={formData[field.name] || ""}
                     onChange={(e) => handleInputChange(field.name, e.target.value)}
                     className="h-8 text-xs bg-white dark:bg-zinc-900"
+                    disabled={submitMutation.isPending}
                   />
                 )}
                 {field.type === "select" && (
@@ -81,6 +163,7 @@ export default function DynamicModuleCard({ moduleDef, hierarchyLabel, isLead }:
                     value={formData[field.name] || ""}
                     onChange={(e) => handleInputChange(field.name, e.target.value)}
                     className="w-full h-8 px-2.5 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs focus:outline-none bg-white dark:bg-zinc-900 font-medium"
+                    disabled={submitMutation.isPending}
                   >
                     <option value="" disabled>Select {field.name}</option>
                     {field.options?.map((opt: string, i: number) => (
@@ -90,8 +173,12 @@ export default function DynamicModuleCard({ moduleDef, hierarchyLabel, isLead }:
                 )}
               </div>
             ))}
-            <Button onClick={handleSubmit} className={`w-full text-white text-xs h-8 ${theme.button}`}>
-              Submit Entry
+            <Button 
+              onClick={handleSubmit} 
+              disabled={submitMutation.isPending}
+              className={`w-full text-white text-xs h-8 ${theme.button}`}
+            >
+              {submitMutation.isPending ? "Submitting..." : "Submit Entry"}
             </Button>
           </div>
         </div>
@@ -99,33 +186,40 @@ export default function DynamicModuleCard({ moduleDef, hierarchyLabel, isLead }:
         {/* Dynamic Ledger / List Display */}
         <div className="md:col-span-2 space-y-3">
           <h4 className="text-xs font-bold text-zinc-400 block">Submitted Entries Ledger</h4>
-          <div className="max-h-48 overflow-y-auto space-y-2 pr-1.5 scrollbar-thin">
-            {entries.length === 0 ? (
+          <div className="max-h-56 overflow-y-auto space-y-2 pr-1.5 scrollbar-thin">
+            {isLoading ? (
+              <div className="text-xs text-zinc-400 text-center py-8">Loading database records...</div>
+            ) : entries.length === 0 ? (
               <div className="text-xs text-zinc-400 text-center py-8 border border-dashed rounded-xl">
                 No entries logged yet.
               </div>
             ) : (
-              entries.map((entry, idx) => (
-                <div key={idx} className="flex justify-between items-center p-3 border border-zinc-100 dark:border-zinc-850 bg-zinc-50 dark:bg-zinc-950 rounded-xl text-xs">
+              entries.map((entry: any, idx: number) => (
+                <div key={idx} className={`flex justify-between items-center p-3 border border-zinc-100 dark:border-zinc-850 bg-zinc-50 dark:bg-zinc-950 rounded-xl text-xs relative ${entry.status === 'pending' ? 'border-l-4 border-l-amber-400' : 'border-l-4 border-l-emerald-400'}`}>
                   <div className="space-y-1">
                     {/* Render first field as bold title */}
-                    <span className="font-bold block text-zinc-900 dark:text-zinc-100">
-                      {moduleDef.fields[0] ? entry[moduleDef.fields[0].name] : "Entry"}
+                    <span className="font-bold block text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                      {moduleDef.fields[0] ? entry.data[moduleDef.fields[0].name] : "Entry"}
+                      <span className={`text-[9px] uppercase font-extrabold px-1.5 py-0.5 rounded-full ${entry.status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                        {entry.status}
+                      </span>
                     </span>
                     {/* Render select fields as small tags */}
                     <div className="flex gap-1">
                       {moduleDef.fields.filter((f: any) => f.type === "select").map((f: any, i: number) => (
                         <span key={i} className={`text-xxs font-bold uppercase tracking-wider ${theme.text}`}>
-                          {entry[f.name]}
+                          {entry.data[f.name]}
                         </span>
                       ))}
                     </div>
+                    {/* Submitted by meta */}
+                    <span className="text-[10px] text-zinc-400 block mt-1">Logged by: {entry.submittedBy?.name || 'System'}</span>
                   </div>
                   {/* Render number fields on the right */}
                   <div className="text-right">
                     {moduleDef.fields.filter((f: any) => f.type === "number").map((f: any, i: number) => (
                       <span key={i} className="font-mono font-bold block text-zinc-850 dark:text-zinc-100">
-                        {entry[f.name]}
+                        {entry.data[f.name]}
                       </span>
                     ))}
                   </div>
@@ -137,10 +231,16 @@ export default function DynamicModuleCard({ moduleDef, hierarchyLabel, isLead }:
       </div>
 
       {/* Leadership Action Mock */}
-      {isLead && (
+      {isLead && pendingCount > 0 && (
         <div className={`p-3 rounded-lg border text-xs font-semibold flex justify-between items-center ${theme.bg.replace('/50', '/30')} ${theme.border} ${theme.text}`}>
           <span>VP/Manager Action: Authorize / Review entries for {moduleDef.name}</span>
-          <Button className={`${theme.button} text-white text-xxs h-7`}>Approve All</Button>
+          <Button 
+            onClick={handleApproveAll}
+            disabled={approveMutation.isPending}
+            className={`${theme.button} text-white text-xxs h-7`}
+          >
+            {approveMutation.isPending ? "Approving..." : "Approve All Pending"}
+          </Button>
         </div>
       )}
     </div>

@@ -22,7 +22,7 @@ export default function ManageModules() {
   const { data: modules, isLoading } = useQuery({
     queryKey: ["modules"],
     queryFn: async () => {
-      const res = await axios.get("/api/modules");
+      const res = await axios.get(`/api/modules?orgId=${user?.orgId}`);
       return res.data.data || [];
     },
   });
@@ -33,7 +33,7 @@ export default function ManageModules() {
       if (isEditing) {
         return axios.put("/api/modules", { id: isEditing, ...payload });
       }
-      return axios.post("/api/modules", payload);
+      return axios.post("/api/modules", { ...payload, orgId: user?.orgId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["modules"] });
@@ -48,7 +48,7 @@ export default function ManageModules() {
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      return axios.delete(`/api/modules?id=${id}`);
+      return axios.delete(`/api/modules?id=${id}`, { data: { orgId: user?.orgId } });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["modules"] });

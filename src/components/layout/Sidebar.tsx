@@ -13,6 +13,8 @@ import {
   Cpu,
   Settings,
   ShieldAlert,
+  LogOut,
+  Plus,
 } from "lucide-react";
 import type { RootState } from "../../app/reduxToolkit/store";
 
@@ -27,14 +29,20 @@ export function Sidebar() {
   const mainNavItems = [
     {
       name: "Dashboard",
-      href: "/",
+      href: "/dashboard",
       icon: Home,
       roles: ["org_admin", "employee"],
     },
     {
       name: "SaaS Maker Admin",
-      href: "/saas-maker",
+      href: "/admin/dashboard",
       icon: ShieldAlert,
+      roles: ["platform_admin"],
+    },
+    {
+      name: "Provision Tenant",
+      href: "/admin/onboard",
+      icon: Plus,
       roles: ["platform_admin"],
     },
     {
@@ -77,10 +85,16 @@ export function Sidebar() {
       icon: Settings,
       roles: ["org_admin", "employee", "platform_admin"],
     },
+    {
+      name: "Switch Profile",
+      href: "/",
+      icon: LogOut,
+      roles: ["org_admin", "employee", "platform_admin"],
+    },
   ];
 
-  // If on login page, hide sidebar completely for a clean screen layout
-  if (pathname === "/login") {
+  // If on login page (root /), hide sidebar completely for a clean screen layout
+  if (pathname === "/") {
     return null;
   }
 

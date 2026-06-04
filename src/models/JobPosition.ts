@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface IJobPosition extends Document {
-  orgId: string;
+  orgId: mongoose.Types.ObjectId;
   title: string;
   description: string;
   department?: string;
@@ -12,7 +12,7 @@ export interface IJobPosition extends Document {
 
 const JobPositionSchema: Schema = new Schema<IJobPosition>(
   {
-    orgId: { type: String, required: true, index: true },
+    orgId: { type: Schema.Types.ObjectId, ref: "Organization", required: true, index: true },
     title: { type: String, required: true },
     description: { type: String, default: "" },
     department: { type: String, default: "Unassigned" },

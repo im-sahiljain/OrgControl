@@ -7,11 +7,12 @@ import { Topbar } from "@/components/layout/Topbar";
 
 export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isLoginPage = pathname === "/login";
+  const publicRoutes = ["/", "/register", "/auth/org", "/auth/admin", "/pricing"];
+  const isAuthPage = publicRoutes.includes(pathname);
 
-  if (isLoginPage) {
+  if (isAuthPage) {
     return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 w-full flex flex-col items-center justify-center">
+      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 w-full flex flex-col">
         {children}
       </div>
     );

@@ -24,7 +24,7 @@ const AddEmployees = () => {
   const { data: departments } = useQuery({
     queryKey: ["departments"],
     queryFn: async () => {
-      const res = await axios.get("/api/departments");
+      const res = await axios.get(`/api/departments?orgId=${user?.orgId}`);
       return res.data.data || [];
     },
   });
@@ -33,7 +33,7 @@ const AddEmployees = () => {
   const { data: positions } = useQuery({
     queryKey: ["positions"],
     queryFn: async () => {
-      const res = await axios.get("/api/positions");
+      const res = await axios.get(`/api/positions?orgId=${user?.orgId}`);
       return res.data.data || [];
     },
   });
@@ -77,7 +77,7 @@ const AddEmployees = () => {
       salary: number;
       profilePhoto: string;
     }) => {
-      const res = await axios.post("/api/employees", newEmployee);
+      const res = await axios.post("/api/employees", { ...newEmployee, orgId: user?.orgId });
       return res.data;
     },
     onSuccess: () => {

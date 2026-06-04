@@ -3,7 +3,10 @@
 import React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
-import { Bell, Search, Menu, LogOut, ShieldAlert } from "lucide-react";
+import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
+import { Bell, Search, Menu, LogOut, ShieldAlert, Building2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import type { RootState } from "../../app/reduxToolkit/store";
 import { setAuthRole, setAuthSession, logoutUser } from "../../app/reduxToolkit/slice";
@@ -14,6 +17,16 @@ export function Topbar() {
   const user = useSelector((state: RootState) => state.employeeUI.user);
   const isAuthenticated = useSelector((state: RootState) => state.employeeUI.isAuthenticated);
 
+  const { data: organization } = useQuery({
+    queryKey: ["organization", user?.orgId],
+    queryFn: async () => {
+      if (!user?.orgId || user.orgId === "platform_layer") return null;
+      const res = await axios.get(`/api/organizations/${user.orgId}`);
+      return res.data.data;
+    },
+    enabled: !!user?.orgId,
+  });
+
   const handleProfileChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const email = e.target.value;
     
@@ -23,12 +36,12 @@ export function Topbar() {
         name: "Platform Owner",
         email: "owner@saasmaker.in",
         role: "platform_admin",
-        orgId: "org_default",
+        orgId: "platform_layer",
       }));
       router.push("/saas-maker");
     } else if (email === "admin@company.in") {
       dispatch(setAuthSession({
-        id: "mock_hr_head",
+        id: "64a7c1b2f43d8e001f9a0001",
         name: "Sahil",
         email: "admin@company.in",
         role: "org_admin",
@@ -39,7 +52,7 @@ export function Topbar() {
       router.push("/");
     } else if (email === "aarav.sharma@company.in") {
       dispatch(setAuthSession({
-        id: "mock_aarav",
+        id: "64a7c1b2f43d8e001f9a0002",
         name: "Aarav Sharma",
         email: "aarav.sharma@company.in",
         role: "employee",
@@ -50,7 +63,7 @@ export function Topbar() {
       router.push("/");
     } else if (email === "vikram.malhotra@company.in") {
       dispatch(setAuthSession({
-        id: "mock_vikram",
+        id: "64a7c1b2f43d8e001f9a0003",
         name: "Vikram Malhotra",
         email: "vikram.malhotra@company.in",
         role: "employee",
@@ -61,7 +74,7 @@ export function Topbar() {
       router.push("/");
     } else if (email === "neha.reddy@company.in") {
       dispatch(setAuthSession({
-        id: "mock_neha",
+        id: "64a7c1b2f43d8e001f9a0004",
         name: "Neha Reddy",
         email: "neha.reddy@company.in",
         role: "employee",
@@ -75,7 +88,7 @@ export function Topbar() {
 
   const handleLogout = () => {
     dispatch(logoutUser());
-    router.push("/login");
+    router.push("/");
   };
 
   return (
@@ -95,6 +108,13 @@ export function Topbar() {
       </div>
 
       <div className="flex items-center gap-4">
+        {organization && (
+          <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-full text-xs font-bold border border-indigo-100 dark:border-indigo-800/50 shadow-sm">
+            <Building2 className="h-3.5 w-3.5" />
+            {organization.name}
+          </div>
+        )}
+
         {/* Dynamic Testing Selector */}
         {isAuthenticated && user && (
           <div className="flex items-center gap-2 border border-dashed border-zinc-250 dark:border-zinc-750 px-3 py-1 rounded-lg bg-zinc-50/50 dark:bg-zinc-900/50 text-xs">
@@ -124,17 +144,22 @@ export function Topbar() {
         {/* User Card & Logout */}
         {isAuthenticated && user ? (
           <div className="flex items-center gap-3">
-            <div className="text-right hidden sm:block">
-              <span className="text-xs font-bold block text-zinc-900 dark:text-zinc-100">
-                {user.name}
-              </span>
-              <span className="text-xxs text-zinc-400 font-medium uppercase block tracking-wider">
-                {user.role.replace("_", " ")}
-              </span>
-            </div>
-            <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 cursor-pointer ring-2 ring-white shadow-sm dark:ring-black flex items-center justify-center text-white font-bold text-xs uppercase">
-              {user.name.charAt(0)}
-            </div>
+            <Link 
+              href={user.role === "platform_admin" ? "#" : "/dashboard/profile"}
+              className="flex items-center gap-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 p-1.5 pr-3 rounded-full transition-all cursor-pointer border border-transparent hover:border-zinc-200 dark:hover:border-zinc-800"
+            >
+              <div className="text-right hidden sm:block">
+                <span className="text-xs font-bold block text-zinc-900 dark:text-zinc-100">
+                  {user.name}
+                </span>
+                <span className="text-xxs text-zinc-400 font-medium uppercase block tracking-wider">
+                  {user.role.replace("_", " ")}
+                </span>
+              </div>
+              <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 ring-2 ring-white shadow-sm dark:ring-black flex items-center justify-center text-white font-bold text-xs uppercase">
+                {user.name.charAt(0)}
+              </div>
+            </Link>
             <button
               onClick={handleLogout}
               className="p-2 text-zinc-400 hover:bg-red-50 dark:hover:bg-red-950/20 hover:text-red-600 rounded-full transition-colors"
@@ -145,7 +170,7 @@ export function Topbar() {
           </div>
         ) : (
           <button
-            onClick={() => router.push("/login")}
+            onClick={() => router.push("/")}
             className="text-xs font-semibold px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
           >
             Log In

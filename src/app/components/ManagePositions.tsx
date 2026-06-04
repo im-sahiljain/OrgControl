@@ -18,7 +18,7 @@ export default function ManagePositions() {
   const { data: departments } = useQuery({
     queryKey: ["departments"],
     queryFn: async () => {
-      const res = await axios.get("/api/departments");
+      const res = await axios.get(`/api/departments?orgId=${user?.orgId}`);
       return res.data.data || [];
     },
   });
@@ -27,7 +27,7 @@ export default function ManagePositions() {
   const { data: positions, isLoading } = useQuery({
     queryKey: ["positions"],
     queryFn: async () => {
-      const res = await axios.get("/api/positions");
+      const res = await axios.get(`/api/positions?orgId=${user?.orgId}`);
       return res.data.data || [];
     },
   });
@@ -35,7 +35,7 @@ export default function ManagePositions() {
   // Create mutation
   const addPositionMutation = useMutation({
     mutationFn: async (payload: any) => {
-      return axios.post("/api/positions", payload);
+      return axios.post("/api/positions", { ...payload, orgId: user?.orgId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["positions"] });
@@ -51,7 +51,7 @@ export default function ManagePositions() {
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      return axios.delete(`/api/positions?id=${id}`);
+      return axios.delete(`/api/positions?id=${id}`, { data: { orgId: user?.orgId } });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["positions"] });

@@ -15,26 +15,29 @@ export function RouteGate({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useSelector((state: RootState) => state.employeeUI.isAuthenticated);
   const user = useSelector((state: RootState) => state.employeeUI.user);
 
-  // 1. If not authenticated and not on login page, force login screen inside useEffect
-  React.useEffect(() => {
-    if (!isAuthenticated && pathname !== "/login") {
-      router.push("/login");
-    }
-  }, [isAuthenticated, pathname, router]);
+  const publicRoutes = ["/", "/register", "/auth/org", "/auth/admin", "/pricing"];
+  const isPublicRoute = publicRoutes.includes(pathname);
 
-  if (!isAuthenticated && pathname !== "/login") {
+  // 1. If not authenticated and not on a public route, force login screen inside useEffect
+  React.useEffect(() => {
+    if (!isAuthenticated && !isPublicRoute) {
+      router.push("/");
+    }
+  }, [isAuthenticated, isPublicRoute, router]);
+
+  if (!isAuthenticated && !isPublicRoute) {
     return null;
   }
 
-  // If on login, let it render directly without sidebar wrappers
-  if (pathname === "/login") {
+  // If on a public route and unauthenticated, let it render directly without sidebar wrappers
+  if (isPublicRoute && !isAuthenticated) {
     return <>{children}</>;
   }
 
   const role = user?.role || "employee";
 
   // 2. Protect Platform Owner / SaaS Maker Panel
-  if (pathname === "/saas-maker" && role !== "platform_admin") {
+  if (pathname.startsWith("/admin") && role !== "platform_admin") {
     return (
       <div className="flex-1 min-h-[70vh] flex flex-col items-center justify-center text-center p-8 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm">
         <div className="h-16 w-16 bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mb-6">
