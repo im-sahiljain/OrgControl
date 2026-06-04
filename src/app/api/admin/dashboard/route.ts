@@ -3,13 +3,16 @@ import dbConnect from "@/lib/dbConnect";
 import Organization from "@/models/Organization";
 import Employee from "@/models/Employee";
 
+import { verifyToken } from "@/lib/jwt";
+
 export async function GET(req: Request) {
   try {
-    await dbConnect();
-    
-    // In a real production app, we would verify the PlatformOwner session here
-    // using cookies or an authorization header token.
+    const decoded = await verifyToken(req);
+    if (!decoded || decoded.role !== "platform_admin") {
+      return NextResponse.json({ success: false, error: "Unauthorized: SaaS Maker Admin permissions required" }, { status: 401 });
+    }
 
+    await dbConnect();
     const organizations = await Organization.find({}).lean();
     
     // Map plans to rough MRR estimates (in INR)

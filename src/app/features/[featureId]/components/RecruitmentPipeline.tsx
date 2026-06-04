@@ -177,7 +177,7 @@ export default function RecruitmentPipeline({ feature }: { feature: any }) {
       {activeTab === "candidates" && (
         <div className="space-y-6">
           {/* Job selection dropdown */}
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
             <span className="text-xs font-bold text-zinc-400 whitespace-nowrap">Filter by Position:</span>
             {loadingJobs ? (
               <Loader2 className="h-4 w-4 animate-spin text-zinc-500" />
@@ -185,7 +185,7 @@ export default function RecruitmentPipeline({ feature }: { feature: any }) {
               <select
                 value={selectedJobId}
                 onChange={(e) => setSelectedJobId(e.target.value)}
-                className="px-3 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900 text-xs focus:outline-none font-bold focus:ring-1 focus:ring-blue-500 text-zinc-850 dark:text-zinc-100"
+                className="px-3 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900 text-xs focus:outline-none font-bold focus:ring-1 focus:ring-blue-500 text-zinc-850 dark:text-zinc-100 max-w-full"
               >
                 {jobs.map((job: any) => (
                   <option key={job._id} value={job._id}>
@@ -201,7 +201,7 @@ export default function RecruitmentPipeline({ feature }: { feature: any }) {
               <Link 
                 href={`/${orgId}/${selectedJobId}/application`} 
                 target="_blank"
-                className="text-[10px] font-bold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-0.5 ml-2"
+                className="text-[10px] font-bold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-0.5 mt-1 sm:mt-0 sm:ml-2 w-fit"
               >
                 Open Public Portal Page <ArrowRight className="h-3 w-3" />
               </Link>
@@ -223,11 +223,11 @@ export default function RecruitmentPipeline({ feature }: { feature: any }) {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-start select-none">
+            <div className="flex md:grid md:grid-cols-5 gap-4 items-start overflow-x-auto pb-4 md:pb-0 snap-x snap-mandatory select-none w-full scrollbar-thin">
               {PIPELINE_STAGES.map((stage) => {
                 const stageCandidates = candidates?.filter((c: any) => c.stage === stage.id) || [];
                 return (
-                  <div key={stage.id} className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-150 dark:border-zinc-850/50 rounded-xl overflow-hidden flex flex-col max-h-[70vh]">
+                  <div key={stage.id} className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-150 dark:border-zinc-850/50 rounded-xl overflow-hidden flex flex-col max-h-[70vh] w-[280px] md:w-full shrink-0 snap-align-start">
                     <div className={`px-3 py-2.5 border-b border-zinc-200 dark:border-zinc-850 flex justify-between items-center text-xs font-bold ${stage.color}`}>
                       <span>{stage.name}</span>
                       <span className="bg-white/90 dark:bg-zinc-900 px-2 py-0.5 rounded-full border border-current text-[10px]">
@@ -287,46 +287,48 @@ export default function RecruitmentPipeline({ feature }: { feature: any }) {
 
       {/* Active Postings Tab */}
       {activeTab === "jobs" && (
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm overflow-hidden text-xs">
-          <div className="bg-zinc-50 dark:bg-zinc-950 p-3 border-b border-zinc-150 dark:border-zinc-850 font-bold text-zinc-500 flex justify-between">
-            <span className="w-1/3">Job Title / Department</span>
-            <span>Location</span>
-            <span>Type</span>
-            <span>Public Link</span>
-            <span className="text-right">Action</span>
-          </div>
+        <div className="overflow-x-auto border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm w-full">
+          <div className="min-w-[650px] bg-white dark:bg-zinc-900 text-xs overflow-hidden">
+            <div className="bg-zinc-50 dark:bg-zinc-950 p-3 border-b border-zinc-150 dark:border-zinc-850 font-bold text-zinc-500 flex justify-between">
+              <span className="w-1/3">Job Title / Department</span>
+              <span>Location</span>
+              <span>Type</span>
+              <span>Public Link</span>
+              <span className="text-right">Action</span>
+            </div>
 
-          {loadingJobs ? (
-            <div className="p-10 flex justify-center"><Loader2 className="h-5 w-5 animate-spin text-blue-600" /></div>
-          ) : jobs && jobs.length > 0 ? (
-            jobs.map((job: any) => (
-              <div key={job._id} className="p-3.5 bg-white dark:bg-zinc-900 flex justify-between items-center border-b border-zinc-100 dark:border-zinc-850 last:border-b-0 hover:bg-zinc-50/50 dark:hover:bg-zinc-950/20">
-                <div className="w-1/3">
-                  <span className="font-bold block text-zinc-800 dark:text-zinc-200 text-sm">{job.title}</span>
-                  <span className="text-xxs text-zinc-400 block mt-0.5 font-semibold uppercase tracking-wider">{job.department}</span>
+            {loadingJobs ? (
+              <div className="p-10 flex justify-center"><Loader2 className="h-5 w-5 animate-spin text-blue-600" /></div>
+            ) : jobs && jobs.length > 0 ? (
+              jobs.map((job: any) => (
+                <div key={job._id} className="p-3.5 bg-white dark:bg-zinc-900 flex justify-between items-center border-b border-zinc-100 dark:border-zinc-850 last:border-b-0 hover:bg-zinc-50/50 dark:hover:bg-zinc-950/20">
+                  <div className="w-1/3">
+                    <span className="font-bold block text-zinc-800 dark:text-zinc-200 text-sm">{job.title}</span>
+                    <span className="text-xxs text-zinc-400 block mt-0.5 font-semibold uppercase tracking-wider">{job.department}</span>
+                  </div>
+                  <div className="text-zinc-550 flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{job.location}</div>
+                  <div className="text-zinc-550 flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{job.type}</div>
+                  <div>
+                    <Link href={`/${orgId}/${job._id}/application`} target="_blank" className="text-blue-600 font-bold hover:underline flex items-center gap-0.5">
+                      Apply Portal <ArrowRight className="h-3 w-3" />
+                    </Link>
+                  </div>
+                  <div className="text-right">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-7 text-xxs font-bold"
+                      onClick={() => { setSelectedJobId(job._id); setActiveTab("candidates"); }}
+                    >
+                      View Pipeline
+                    </Button>
+                  </div>
                 </div>
-                <div className="text-zinc-550 flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{job.location}</div>
-                <div className="text-zinc-550 flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{job.type}</div>
-                <div>
-                  <Link href={`/${orgId}/${job._id}/application`} target="_blank" className="text-blue-600 font-bold hover:underline flex items-center gap-0.5">
-                    Apply Portal <ArrowRight className="h-3 w-3" />
-                  </Link>
-                </div>
-                <div className="text-right">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="h-7 text-xxs font-bold"
-                    onClick={() => { setSelectedJobId(job._id); setActiveTab("candidates"); }}
-                  >
-                    View Pipeline
-                  </Button>
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="p-8 text-center text-zinc-400 italic">No job postings created.</div>
-          )}
+              ))
+            ) : (
+              <div className="p-8 text-center text-zinc-400 italic">No job postings created.</div>
+            )}
+          </div>
         </div>
       )}
 
@@ -337,8 +339,8 @@ export default function RecruitmentPipeline({ feature }: { feature: any }) {
             Draft a New Job Posting
           </h3>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5 col-span-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5 sm:col-span-2">
               <label className="text-xs font-semibold text-zinc-500">Job Title <span className="text-red-500">*</span></label>
               <Input
                 type="text"
