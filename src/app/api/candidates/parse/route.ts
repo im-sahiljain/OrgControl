@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { GoogleGenAI } from "@google/genai";
 
 export async function POST(req: Request) {
   try {
@@ -11,57 +12,53 @@ export async function POST(req: Request) {
       );
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
-    const isMockKey = !apiKey || apiKey.includes("your_openai_key");
+    const apiKey = process.env.GEMINI_API_KEY;
+    const isMockKey = !apiKey || apiKey.includes("your_gemini_key");
 
-    // If no real OpenAI API Key is configured, do not mock-screen. Return a clean error.
+    // If no real Gemini API Key is configured, do not mock-screen. Return a clean error.
     if (isMockKey) {
       return NextResponse.json(
         {
           success: false,
-          error: "OpenAI API Key is missing or invalid. Please configure OPENAI_API_KEY in your .env file to run live AI screening.",
+          error:
+            "GEMINI_API_KEY is missing or invalid. Please configure GEMINI_API_KEY in your .env file to run live AI screening.",
         },
         { status: 400 },
       );
     }
 
     try {
-      const OpenAI = eval('require')("openai");
-      const openai = new OpenAI({ apiKey });
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: "You are an AI Recruitment Assistant screening candidates for a multi-tenant SaaS. You must output structured JSON only.",
-          },
-          {
-            role: "user",
-            content: `Analyze candidate "${name}" applying for "${jobTitle}".
-            Generate the following structured JSON output:
-            {
-              "matchScore": number (0-100),
-              "skills": string[],
-              "summary": string,
-              "pros": string[],
-              "cons": string[],
-              "interviewQuestions": [
-                { "question": "string", "focusArea": "string" }
-              ]
-            }`,
-          },
-        ],
-        response_format: { type: "json_object" },
+      const ai = new GoogleGenAI({ apiKey });
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: `Analyze candidate "${name}" applying for "${jobTitle}".
+        Generate the following structured JSON output:
+        {
+          "matchScore": number (0-100),
+          "skills": string[],
+          "summary": string,
+          "pros": string[],
+          "cons": string[],
+          "interviewQuestions": [
+            { "question": "string", "focusArea": "string" }
+          ]
+        }`,
+        config: {
+          systemInstruction:
+            "You are an AI Recruitment Assistant screening candidates for a multi-tenant SaaS. You must output structured JSON only.",
+          responseMimeType: "application/json",
+        },
       });
 
-      const rawText = response.choices[0]?.message?.content || "{}";
+      const rawText = response.text || "{}";
       const aiResult = JSON.parse(rawText);
+      console.log("aiResult", aiResult);
 
       return NextResponse.json({ success: true, data: aiResult });
     } catch (err: any) {
-      console.error("OpenAI API call failed:", err);
+      console.error("Gemini API call failed:", err);
       return NextResponse.json(
-        { success: false, error: `OpenAI API call failed: ${err.message}` },
+        { success: false, error: `Gemini API call failed: ${err.message}` },
         { status: 500 },
       );
     }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
@@ -10,23 +10,26 @@ import ManagePositions from "../components/ManagePositions";
 import ManageDepartmentRoster from "../components/ManageDepartmentRoster";
 import { setSearchFilter } from "../reduxToolkit/slice";
 import type { RootState } from "../reduxToolkit/store";
-import { PREDEFINED_DEPARTMENTS, getDefaultFeatureIdsForDept } from "@/lib/departmentRegistry";
+import {
+  PREDEFINED_DEPARTMENTS,
+  // getDefaultFeatureIdsForDept,
+} from "@/lib/departmentRegistry";
 import * as LucideIcons from "lucide-react";
-import { 
-  Search, 
-  FolderPlus, 
-  Users, 
-  Loader2, 
-  Sparkles, 
-  Building2, 
-  User, 
-  Settings2, 
-  Trash2, 
-  Plus, 
+import {
+  Search,
+  FolderPlus,
+  Users,
+  Loader2,
+  Sparkles,
+  Building2,
+  User,
+  Settings2,
+  Trash2,
+  Plus,
   LayoutGrid,
   Briefcase,
   UserCheck,
-  ChevronRight
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,15 +37,22 @@ import { Input } from "@/components/ui/input";
 export default function EmployeesPage() {
   const dispatch = useDispatch();
   const queryClient = useQueryClient();
-  const searchFilter = useSelector((state: RootState) => state.employeeUI.searchFilter);
+  const searchFilter = useSelector(
+    (state: RootState) => state.employeeUI.searchFilter,
+  );
 
-  const [activeTab, setActiveTab] = useState<"employees" | "departments" | "positions">("employees");
+  const [activeTab, setActiveTab] = useState<
+    "employees" | "departments" | "positions"
+  >("employees");
 
   // New Department Form States
-  const [selectedPredefinedDeptSlug, setSelectedPredefinedDeptSlug] = useState<string>("");
+  const [selectedPredefinedDeptSlug, setSelectedPredefinedDeptSlug] =
+    useState<string>("");
 
   // Roster Edit Modal State
-  const [editingRosterDeptId, setEditingRosterDeptId] = useState<string | null>(null);
+  const [editingRosterDeptId, setEditingRosterDeptId] = useState<string | null>(
+    null,
+  );
 
   // Fetch employees list
   const { data: employees } = useQuery({
@@ -71,10 +81,15 @@ export default function EmployeesPage() {
     },
   });
 
-
   // Add department mutation
   const addDeptMutation = useMutation({
-    mutationFn: async (newDept: { slug?: string; name: string; description: string; budget: { annual: number; currency: string }; headIds: string[] }) => {
+    mutationFn: async (newDept: {
+      slug?: string;
+      name: string;
+      description: string;
+      budget: { annual: number; currency: string };
+      headIds: string[];
+    }) => {
       const res = await axios.post("/api/departments", newDept);
       return res.data;
     },
@@ -88,8 +103,6 @@ export default function EmployeesPage() {
     },
   });
 
-
-
   const handleAddDept = () => {
     if (!selectedPredefinedDeptSlug) {
       alert("Please select a predefined department.");
@@ -99,13 +112,11 @@ export default function EmployeesPage() {
     addDeptMutation.mutate({
       slug: selectedPredefinedDeptSlug, // Pass slug to trigger auto-provisioning in API
       name: "", // Will be auto-filled by API
-      description: "", 
+      description: "",
       budget: { annual: 150000, currency: "USD" },
       headIds: [], // Assigned later via configurator
     });
   };
-
-
 
   // widgetsList is now replaced by the dynamic modulesList from the API.
 
@@ -118,7 +129,8 @@ export default function EmployeesPage() {
             Workforce & Department Directory
           </h1>
           <p className="text-sm text-zinc-550">
-            Supervise organization hierarchies, edit leadership structures, and enable dynamic dashboard widgets.
+            Supervise organization hierarchies, edit leadership structures, and
+            enable dynamic dashboard widgets.
           </p>
         </div>
 
@@ -205,32 +217,44 @@ export default function EmployeesPage() {
 
             <div className="p-4 flex-1 overflow-y-auto space-y-3 bg-zinc-50/50 dark:bg-zinc-950/50">
               {PREDEFINED_DEPARTMENTS.map((dept) => {
-                const isAlreadyAdded = departments?.some((d: any) => d.slug === dept.slug || d.name === dept.name);
+                const isAlreadyAdded = departments?.some(
+                  (d: any) => d.slug === dept.slug || d.name === dept.name,
+                );
                 const isSelected = selectedPredefinedDeptSlug === dept.slug;
-                const Icon = (LucideIcons as any)[dept.icon] || LucideIcons.Building;
-                
+                const Icon =
+                  (LucideIcons as any)[dept.icon] || LucideIcons.Building;
+
                 return (
                   <div
                     key={dept.slug}
-                    onClick={() => !isAlreadyAdded && setSelectedPredefinedDeptSlug(dept.slug)}
+                    onClick={() =>
+                      !isAlreadyAdded &&
+                      setSelectedPredefinedDeptSlug(dept.slug)
+                    }
                     className={`p-3 rounded-xl border transition-all cursor-pointer flex gap-3 ${
                       isAlreadyAdded
                         ? "opacity-60 bg-zinc-100 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 cursor-not-allowed"
                         : isSelected
-                        ? "border-blue-500 bg-blue-50/50 dark:bg-blue-900/20 shadow-sm"
-                        : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-blue-300"
+                          ? "border-blue-500 bg-blue-50/50 dark:bg-blue-900/20 shadow-sm"
+                          : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-blue-300"
                     }`}
                   >
-                    <div className={`p-2 rounded-lg shrink-0 h-fit ${
-                      isAlreadyAdded ? "bg-zinc-200 text-zinc-500 dark:bg-zinc-800" :
-                      isSelected ? "bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400" :
-                      "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
-                    }`}>
+                    <div
+                      className={`p-2 rounded-lg shrink-0 h-fit ${
+                        isAlreadyAdded
+                          ? "bg-zinc-200 text-zinc-500 dark:bg-zinc-800"
+                          : isSelected
+                            ? "bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400"
+                            : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+                      }`}
+                    >
                       <Icon className="h-5 w-5" />
                     </div>
                     <div>
                       <div className="flex items-center justify-between gap-2">
-                        <h4 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">{dept.name}</h4>
+                        <h4 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">
+                          {dept.name}
+                        </h4>
                         {isAlreadyAdded && (
                           <span className="text-[10px] uppercase tracking-wider font-bold text-emerald-600 bg-emerald-100 px-1.5 py-0.5 rounded-full">
                             Added
@@ -249,10 +273,14 @@ export default function EmployeesPage() {
             <div className="p-4 bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800 flex justify-end shrink-0">
               <Button
                 onClick={handleAddDept}
-                disabled={addDeptMutation.isPending || !selectedPredefinedDeptSlug}
+                disabled={
+                  addDeptMutation.isPending || !selectedPredefinedDeptSlug
+                }
                 className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm w-full"
               >
-                {addDeptMutation.isPending ? "Provisioning..." : "Add Selected Department"}
+                {addDeptMutation.isPending
+                  ? "Provisioning..."
+                  : "Add Selected Department"}
               </Button>
             </div>
           </div>
@@ -267,7 +295,9 @@ export default function EmployeesPage() {
             {deptsLoading ? (
               <div className="flex flex-col items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-2" />
-                <p className="text-sm text-zinc-550">Querying organization charts...</p>
+                <p className="text-sm text-zinc-550">
+                  Querying organization charts...
+                </p>
               </div>
             ) : departments.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -290,9 +320,11 @@ export default function EmployeesPage() {
                       <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
                         {dept.description}
                       </p>
-                      
-                      <button 
-                        onClick={() => setEditingRosterDeptId(dept._id || dept.id)}
+
+                      <button
+                        onClick={() =>
+                          setEditingRosterDeptId(dept._id || dept.id)
+                        }
                         className="mt-4 w-full flex justify-center items-center gap-2 py-1.5 px-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg text-xs font-semibold transition-colors"
                       >
                         <Settings2 className="h-3.5 w-3.5" />
@@ -302,56 +334,90 @@ export default function EmployeesPage() {
 
                     <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 space-y-1.5 text-xs mt-3">
                       <div className="flex justify-between items-start font-semibold gap-2">
-                        <span className="text-zinc-400 shrink-0">Leadership Heads:</span>
+                        <span className="text-zinc-400 shrink-0">
+                          Leadership Heads:
+                        </span>
                         <span className="text-blue-600 dark:text-blue-400 flex items-center gap-1 text-right leading-relaxed flex-wrap justify-end">
                           <User className="h-3.5 w-3.5 shrink-0" />
                           {dept.headIds && dept.headIds.length > 0
                             ? dept.headIds
-                                .map((id: string) => employees?.find((e: any) => e._id === id || e.id === id)?.empName)
+                                .map(
+                                  (id: string) =>
+                                    employees?.find(
+                                      (e: any) => e._id === id || e.id === id,
+                                    )?.empName,
+                                )
                                 .filter(Boolean)
                                 .join(", ") || "Vacant"
                             : "Vacant"}
                         </span>
                       </div>
                       <div className="flex justify-between font-semibold">
-                        <span className="text-zinc-400">Annual Budget Cap:</span>
+                        <span className="text-zinc-400">
+                          Annual Budget Cap:
+                        </span>
                         <span className="text-zinc-700 dark:text-zinc-300 font-mono">
                           ₹{(dept.budget?.annual || 150000).toLocaleString()}
                         </span>
                       </div>
-                      
+
                       {/* Managers and Teams Hierarchy View */}
                       <div className="mt-4 pt-3 border-t border-zinc-100 dark:border-zinc-800 space-y-3">
-                        <span className="text-zinc-400 shrink-0 block">Managers & Teams:</span>
+                        <span className="text-zinc-400 shrink-0 block">
+                          Managers & Teams:
+                        </span>
                         {dept.managers && dept.managers.length > 0 ? (
                           <div className="space-y-2">
                             {dept.managers.map((mgrRow: any, idx: number) => {
-                              const manager = employees?.find((e: any) => e._id === mgrRow.managerId || e.id === mgrRow.managerId);
+                              const manager = employees?.find(
+                                (e: any) =>
+                                  e._id === mgrRow.managerId ||
+                                  e.id === mgrRow.managerId,
+                              );
                               return (
-                                <div key={idx} className="bg-zinc-100/50 dark:bg-zinc-800/20 p-2 rounded-lg border border-zinc-200/50 dark:border-zinc-700/50">
+                                <div
+                                  key={idx}
+                                  className="bg-zinc-100/50 dark:bg-zinc-800/20 p-2 rounded-lg border border-zinc-200/50 dark:border-zinc-700/50"
+                                >
                                   <div className="font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
                                     <UserCheck className="h-3.5 w-3.5 text-blue-500" />
-                                    {manager ? manager.empName : "Vacant / Unknown"}
+                                    {manager
+                                      ? manager.empName
+                                      : "Vacant / Unknown"}
                                   </div>
-                                  {mgrRow.memberIds && mgrRow.memberIds.length > 0 && (
-                                    <div className="mt-1.5 ml-5 pl-2 border-l-2 border-zinc-200 dark:border-zinc-700 space-y-1">
-                                      {mgrRow.memberIds.map((memId: string) => {
-                                        const member = employees?.find((e: any) => e._id === memId || e.id === memId);
-                                        return (
-                                          <div key={memId} className="text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
-                                            <ChevronRight className="h-3 w-3" />
-                                            {member ? member.empName : "Unknown Member"}
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  )}
+                                  {mgrRow.memberIds &&
+                                    mgrRow.memberIds.length > 0 && (
+                                      <div className="mt-1.5 ml-5 pl-2 border-l-2 border-zinc-200 dark:border-zinc-700 space-y-1">
+                                        {mgrRow.memberIds.map(
+                                          (memId: string) => {
+                                            const member = employees?.find(
+                                              (e: any) =>
+                                                e._id === memId ||
+                                                e.id === memId,
+                                            );
+                                            return (
+                                              <div
+                                                key={memId}
+                                                className="text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5"
+                                              >
+                                                <ChevronRight className="h-3 w-3" />
+                                                {member
+                                                  ? member.empName
+                                                  : "Unknown Member"}
+                                              </div>
+                                            );
+                                          },
+                                        )}
+                                      </div>
+                                    )}
                                 </div>
                               );
                             })}
                           </div>
                         ) : (
-                          <span className="text-zinc-400 italic block mt-1">No managers assigned.</span>
+                          <span className="text-zinc-400 italic block mt-1">
+                            No managers assigned.
+                          </span>
                         )}
                       </div>
                     </div>
@@ -367,19 +433,15 @@ export default function EmployeesPage() {
         </div>
       )}
 
-
-
       {/* "Manage Modules" is removed from primary tabs to favor predefined widgets */}
 
-      {activeTab === "positions" && (
-        <ManagePositions />
-      )}
+      {activeTab === "positions" && <ManagePositions />}
 
       {/* Dynamic Modal for Hierarchy/Roster Editing */}
       {editingRosterDeptId && (
-        <ManageDepartmentRoster 
-          departmentId={editingRosterDeptId} 
-          onClose={() => setEditingRosterDeptId(null)} 
+        <ManageDepartmentRoster
+          departmentId={editingRosterDeptId}
+          onClose={() => setEditingRosterDeptId(null)}
         />
       )}
     </div>
