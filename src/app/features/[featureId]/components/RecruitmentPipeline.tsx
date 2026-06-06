@@ -26,6 +26,8 @@ import {
   ChevronRight,
   UserPlus,
   GripVertical,
+  Search,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -297,12 +299,23 @@ export default function RecruitmentPipeline({ feature }: { feature: any }) {
   const orgId = user?.orgId;
 
   const [activeTab, setActiveTab] = useState<
-    "candidates" | "jobs" | "post-job"
+    "candidates" | "jobs" | "post-job" | "rag-search"
   >("candidates");
   const [selectedJobId, setSelectedJobId] = useState<string>("");
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(
     null,
   );
+
+  // Semantic RAG Search & Batch Screening states
+  const [ragSearchQuery, setRagSearchQuery] = useState("");
+  const [ragResults, setRagResults] = useState<any[] | null>(null);
+  const [searchingRag, setSearchingRag] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [batchScreening, setBatchScreening] = useState(false);
+  const [batchProgress, setBatchProgress] = useState(0);
+  const [batchTotal, setBatchTotal] = useState(0);
+  const [batchCurrentName, setBatchCurrentName] = useState("");
+  const [searchMethod, setSearchMethod] = useState<string | null>(null);
 
   // Multi-select state for drag-and-drop
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -323,6 +336,118 @@ export default function RecruitmentPipeline({ feature }: { feature: any }) {
   const [jobType, setJobType] = useState("Full-time");
   const [jobDesc, setJobDesc] = useState("");
   const [jobReqs, setJobReqs] = useState("");
+
+  // ---------------- RAG & SEMANTIC SEARCH HANDLERS ----------------
+  const runRagSearch = async (query: string = "") => {
+    if (!selectedJobId) return;
+    setSearchingRag(true);
+    setSearchError(null);
+    try {
+      const res = await axios.post("/api/candidates/match", {
+        jobId: selectedJobId,
+        searchQuery: query,
+        limit: 20
+      });
+      if (res.data.success) {
+        setRagResults(res.data.data);
+        setSearchMethod(res.data.searchMethod);
+      } else {
+        setSearchError(res.data.error || "Failed to search candidates.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      setSearchError(err.response?.data?.error || "Error connecting to search service.");
+    } finally {
+      setSearchingRag(false);
+    }
+  };
+
+  const handleBatchScreen = async () => {
+    if (!selectedJobId) return;
+    
+    setBatchScreening(true);
+    setBatchProgress(0);
+    setBatchCurrentName("");
+    
+    try {
+      const res = await axios.get(`/api/candidates?orgId=${orgId}&jobId=${selectedJobId}`);
+      const allCandidates = res.data.data || [];
+      const unscreened = allCandidates.filter((c: any) => !c.isAiScreened);
+      
+      if (unscreened.length === 0) {
+        alert("All candidates for this job posting are already AI-screened.");
+        setBatchScreening(false);
+        return;
+      }
+      
+      setBatchTotal(unscreened.length);
+      let count = 0;
+      
+      for (const cand of unscreened) {
+        setBatchCurrentName(cand.name);
+        
+        try {
+          // A. Fetch job position details to get the job title
+          const jobRes = await axios.get(`/api/jobs/${cand.jobId}`);
+          const jobTitle = jobRes.data.data?.title || "Software Engineer";
+          
+          // B. Call parse API
+          const parseRes = await axios.post("/api/candidates/parse", {
+            name: cand.name,
+            email: cand.email,
+            phone: cand.phone,
+            jobTitle,
+            resumeUrl: cand.resumeUrl
+          });
+          
+          const aiInsights = parseRes.data.data;
+          
+          // C. Save updated insights to database
+          await axios.put("/api/candidates", {
+            id: cand._id,
+            isAiScreened: true,
+            matchScore: aiInsights.matchScore,
+            skills: aiInsights.skills,
+            summary: aiInsights.summary,
+            pros: aiInsights.pros,
+            cons: aiInsights.cons,
+            interviewQuestions: aiInsights.interviewQuestions,
+            resumeText: aiInsights.extractedResumeText || ""
+          });
+        } catch (err) {
+          console.error(`Failed to screen candidate ${cand.name}`, err);
+        }
+        
+        count++;
+        setBatchProgress(count);
+        
+        // Add a 1.5s delay between candidates to respect rate limits
+        await new Promise(resolve => setTimeout(resolve, 1500));
+      }
+      
+      alert(`Batch AI screening completed successfully! Processed ${count} candidate(s).`);
+      queryClient.invalidateQueries({ queryKey: ["recruitment-candidates"] });
+      runRagSearch(ragSearchQuery);
+    } catch (err: any) {
+      console.error(err);
+      alert("Failed to run batch screening: " + (err.response?.data?.error || err.message));
+    } finally {
+      setBatchScreening(false);
+    }
+  };
+
+  const handleUpdateStageFromRag = async (candidateId: string, newStage: string) => {
+    try {
+      await updateCandidateStageMutation.mutateAsync({ candidateId, newStage });
+      setRagResults(prev => 
+        prev ? prev.map(c => c._id === candidateId ? { ...c, stage: newStage } : c) : null
+      );
+    } catch (err) {
+      console.error("Failed to update candidate stage from RAG list:", err);
+    }
+  };
+
+  // -----------------------------------------------------------------
 
   // Fetch detailed Candidate info on-demand when the drawer opens
   const { data: fullCandidate, isLoading: loadingDetails } = useQuery({
@@ -745,6 +870,13 @@ export default function RecruitmentPipeline({ feature }: { feature: any }) {
             <Plus className="h-4 w-4" />
             Create Posting
           </button>
+          <button
+            onClick={() => setActiveTab("rag-search")}
+            className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 ${activeTab === "rag-search" ? "bg-white dark:bg-zinc-850 shadow-sm text-zinc-900 dark:text-white" : "text-zinc-500 hover:text-zinc-850 dark:hover:text-zinc-300"}`}
+          >
+            <Sparkles className="h-4 w-4 text-violet-650" />
+            Semantic RAG Search
+          </button>
         </div>
       </div>
 
@@ -1043,6 +1175,298 @@ export default function RecruitmentPipeline({ feature }: { feature: any }) {
             </Button>
           </div>
         </form>
+      )}
+
+      {/* RAG Vector Search View */}
+      {activeTab === "rag-search" && (
+        <div className="space-y-6">
+          {/* Job selection dropdown */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-4 rounded-xl shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+              <span className="text-xs font-bold text-zinc-400 whitespace-nowrap">
+                Select Job Post:
+              </span>
+              {loadingJobs ? (
+                <Loader2 className="h-4 w-4 animate-spin text-zinc-500" />
+              ) : jobs && jobs.length > 0 ? (
+                <select
+                  value={selectedJobId}
+                  onChange={(e) => setSelectedJobId(e.target.value)}
+                  className="px-3 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900 text-xs focus:outline-none font-bold focus:ring-1 focus:ring-blue-500 text-zinc-850 dark:text-zinc-100 max-w-full"
+                >
+                  {jobs.map((job: any) => (
+                    <option key={job._id} value={job._id}>
+                      {job.title} ({job.location})
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className="text-xs text-zinc-400 italic">
+                  No job postings created yet.
+                </span>
+              )}
+            </div>
+
+            {selectedJobId && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xxs font-bold gap-1 flex items-center bg-violet-50 hover:bg-violet-100 dark:bg-violet-950/20 text-violet-650 hover:text-violet-750 dark:text-violet-400 border-violet-100/50 dark:border-violet-900/50"
+                onClick={handleBatchScreen}
+                disabled={batchScreening}
+              >
+                {batchScreening ? (
+                  <>
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Screening {batchProgress}/{batchTotal} ({batchCurrentName})
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Auto-Screen Unscreened Candidates
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+
+          {/* Batch progress display panel */}
+          {batchScreening && (
+            <div className="p-4 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 rounded-xl space-y-2 animate-pulse">
+              <div className="flex justify-between text-xxs font-bold text-zinc-500">
+                <span>AI Screening Pipeline Queue...</span>
+                <span>{batchProgress} of {batchTotal} candidates ({Math.round((batchProgress / batchTotal) * 100)}%)</span>
+              </div>
+              <div className="w-full bg-zinc-205 dark:bg-zinc-800 h-2 rounded-full overflow-hidden">
+                <div 
+                  className="bg-violet-600 h-full rounded-full transition-all duration-300"
+                  style={{ width: `${(batchProgress / batchTotal) * 100}%` }}
+                />
+              </div>
+              <p className="text-[10px] text-zinc-400 italic">
+                Processing resume text and generating vector embeddings for: <strong className="text-zinc-650 dark:text-zinc-300">{batchCurrentName}</strong>
+              </p>
+            </div>
+          )}
+
+          {/* RAG Query Controls */}
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-sm space-y-4">
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-55 flex items-center gap-1.5">
+                <Sparkles className="h-4.5 w-4.5 text-violet-600 animate-pulse" />
+                Semantic RAG Profile Search
+              </h3>
+              <p className="text-xxs text-zinc-505 leading-relaxed">
+                Describe the specific candidate profile, skills, or background you want to find. The Vector Database calculates semantic matching values against resume text and coordinates, sorting results by score.
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-400" />
+                <Input
+                  placeholder="e.g. Senior Frontend engineer with strong knowledge of state management, Next.js, and Redis caching"
+                  value={ragSearchQuery}
+                  onChange={(e) => setRagSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") runRagSearch(ragSearchQuery);
+                  }}
+                  className="pl-9 h-9 text-xs focus:ring-violet-500 focus:border-violet-500 font-medium"
+                />
+              </div>
+              <Button
+                size="sm"
+                className="bg-violet-600 hover:bg-violet-750 text-white font-bold h-9 px-4 text-xs shrink-0"
+                onClick={() => runRagSearch(ragSearchQuery)}
+                disabled={searchingRag || !selectedJobId}
+              >
+                {searchingRag ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "Search Pool"
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 px-3 text-xs gap-1 flex items-center border-zinc-250 hover:bg-zinc-50 dark:hover:bg-zinc-850"
+                onClick={() => {
+                  setRagSearchQuery("");
+                  runRagSearch("");
+                }}
+                disabled={searchingRag || !selectedJobId}
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Reset (JD Match)
+              </Button>
+            </div>
+
+            {searchMethod && (
+              <div className="flex items-center gap-1.5 text-[10px] text-zinc-400 font-bold">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                Search Mode:{" "}
+                <span className="text-zinc-550 dark:text-zinc-300 uppercase">
+                  {searchMethod === "vectorSearch" ? "MongoDB Atlas Vector Search" : "Local Cosine Similarity Fallback"}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Results list */}
+          <div className="space-y-4">
+            <h4 className="text-xs font-bold text-zinc-450 block uppercase tracking-wider">
+              Matched Candidates ({ragResults?.length || 0})
+            </h4>
+
+            {searchingRag ? (
+              <div className="py-20 flex flex-col items-center justify-center space-y-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm">
+                <Loader2 className="h-8 w-8 animate-spin text-violet-600" />
+                <span className="text-xs font-bold text-zinc-505">
+                  Performing semantic vector similarity matches...
+                </span>
+              </div>
+            ) : searchError ? (
+              <div className="p-6 text-center text-xs font-bold text-rose-500 bg-rose-50/50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900 rounded-xl">
+                {searchError}
+              </div>
+            ) : ragResults && ragResults.length > 0 ? (
+              <div className="grid grid-cols-1 gap-4">
+                {ragResults.map((cand) => {
+                  return (
+                    <div
+                      key={cand._id}
+                      className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col md:flex-row justify-between gap-6"
+                    >
+                      {/* Left: Info */}
+                      <div className="space-y-3 flex-1 overflow-hidden">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <button
+                            onClick={() => setSelectedCandidateId(cand._id)}
+                            className="font-bold text-sm text-zinc-900 dark:text-zinc-50 hover:text-blue-600 dark:hover:text-blue-450 hover:underline text-left truncate cursor-pointer"
+                          >
+                            {cand.name}
+                          </button>
+                          
+                          <span
+                            className={`text-[9px] font-extrabold px-2 py-0.5 rounded capitalize ${
+                              cand.stage === "offered"
+                                ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                                : cand.stage === "rejected"
+                                  ? "bg-rose-50 text-rose-600 border border-rose-100"
+                                  : cand.stage === "interviewing"
+                                    ? "bg-amber-50 text-amber-600 border border-amber-100"
+                                    : "bg-blue-50 text-blue-600 border border-blue-100"
+                            }`}
+                          >
+                            {cand.stage}
+                          </span>
+                        </div>
+
+                        <div className="text-xxs text-zinc-400 space-x-3 font-semibold">
+                          <span>{cand.email}</span>
+                          <span>•</span>
+                          <span>{cand.phone || "No Phone"}</span>
+                          {cand.resumeUrl && (
+                            <>
+                              <span>•</span>
+                              <a
+                                href={cand.resumeUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-blue-600 hover:underline inline-flex items-center gap-0.5 font-bold"
+                              >
+                                <FileText className="h-3 w-3" /> View Resume
+                              </a>
+                            </>
+                          )}
+                        </div>
+
+                        {cand.summary && (
+                          <p className="text-xs text-zinc-505 dark:text-zinc-450 leading-relaxed line-clamp-2">
+                            {cand.summary}
+                          </p>
+                        )}
+
+                        {cand.skills && cand.skills.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {cand.skills.slice(0, 6).map((sk: string) => (
+                              <span
+                                key={sk}
+                                className="px-2 py-0.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-150 dark:border-zinc-850 rounded text-[10px] font-bold text-zinc-500"
+                              >
+                                {sk}
+                              </span>
+                            ))}
+                            {cand.skills.length > 6 && (
+                              <span className="text-[9px] text-zinc-400 font-bold self-center">
+                                +{cand.skills.length - 6} more
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Right: Score & Actions */}
+                      <div className="flex flex-row md:flex-col justify-between items-center md:items-end gap-4 shrink-0 min-w-[150px]">
+                        <div className="flex items-center gap-2">
+                          <div className="text-right">
+                            <span className="text-xxs text-zinc-400 font-bold block uppercase tracking-wider">
+                              Similarity Match
+                            </span>
+                            <span
+                              className={`text-base font-extrabold block mt-0.5 ${
+                                cand.matchPercentage >= 80
+                                  ? "text-emerald-600"
+                                  : cand.matchPercentage >= 70
+                                    ? "text-purple-600"
+                                    : "text-zinc-500"
+                              }`}
+                            >
+                              {cand.matchPercentage}%
+                            </span>
+                          </div>
+                          
+                          <div className="h-9 w-9 rounded-full border-2 border-zinc-100 dark:border-zinc-800 flex items-center justify-center font-bold text-xs bg-zinc-50 dark:bg-zinc-950">
+                            {cand.matchPercentage}
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2">
+                          {cand.stage !== "interviewing" && cand.stage !== "offered" && (
+                            <Button
+                              size="sm"
+                              className="h-8 text-[10px] font-bold bg-blue-600 hover:bg-blue-750 text-white"
+                              onClick={() => handleUpdateStageFromRag(cand._id, "interviewing")}
+                            >
+                              Shortlist
+                            </Button>
+                          )}
+                          {cand.stage !== "rejected" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-[10px] font-bold border-zinc-250 text-rose-600 hover:text-rose-700 hover:bg-rose-50/30"
+                              onClick={() => handleUpdateStageFromRag(cand._id, "rejected")}
+                            >
+                              Reject
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="py-16 text-center bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm text-zinc-450 italic text-xs space-y-2 flex flex-col items-center">
+                <p>No candidates processed for vector matching yet.</p>
+                <p className="text-[10px] font-normal not-italic max-w-sm text-zinc-500">
+                  Ensure candidate resumes are AI-screened to generate their vector embeddings, then enter a search query above.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Candidate Detail AI Insights Panel */}

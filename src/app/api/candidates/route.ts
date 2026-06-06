@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Candidate from "@/models/Candidate";
+import { generateEmbedding } from "@/lib/gemini";
 
 export async function GET(req: Request) {
   try {
@@ -92,6 +93,7 @@ export async function POST(req: Request) {
       pros,
       cons,
       interviewQuestions,
+      resumeText,
     } = body;
 
     if (!orgId || !jobId || !name || !email || !phone || !resumeUrl) {
@@ -103,6 +105,15 @@ export async function POST(req: Request) {
 
     console.log("stage", stage);
 
+    let resumeEmbedding: number[] = [];
+    if (resumeText) {
+      try {
+        resumeEmbedding = await generateEmbedding(resumeText);
+      } catch (embErr) {
+        console.warn("Failed to generate embedding on POST:", embErr);
+      }
+    }
+
     const newCandidate = await Candidate.create({
       orgId,
       jobId,
@@ -110,7 +121,7 @@ export async function POST(req: Request) {
       email,
       phone,
       resumeUrl,
-      stage: "screened",
+      stage: stage || "applied",
       isAiScreened: isAiScreened !== undefined ? isAiScreened : false,
       matchScore: matchScore || 0,
       skills: skills || [],
@@ -118,6 +129,8 @@ export async function POST(req: Request) {
       pros: pros || [],
       cons: cons || [],
       interviewQuestions: interviewQuestions || [],
+      resumeText: resumeText || "",
+      resumeEmbedding: resumeEmbedding,
     });
 
     return NextResponse.json(
@@ -150,6 +163,7 @@ export async function PUT(req: Request) {
       pros,
       cons,
       interviewQuestions,
+      resumeText,
     } = body;
 
     if (!id) {
@@ -172,6 +186,19 @@ export async function PUT(req: Request) {
     if (cons !== undefined) updateData.cons = cons;
     if (interviewQuestions !== undefined)
       updateData.interviewQuestions = interviewQuestions;
+    
+    if (resumeText !== undefined) {
+      updateData.resumeText = resumeText;
+      if (resumeText) {
+        try {
+          updateData.resumeEmbedding = await generateEmbedding(resumeText);
+        } catch (embErr) {
+          console.warn("Failed to generate embedding on PUT:", embErr);
+        }
+      } else {
+        updateData.resumeEmbedding = [];
+      }
+    }
 
     const updatedCandidate = await Candidate.findByIdAndUpdate(id, updateData, {
       new: true,

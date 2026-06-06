@@ -57,6 +57,7 @@ export default function UnscreenedResumesWidget({ orgId }: UnscreenedResumesWidg
         pros: aiInsights.pros,
         cons: aiInsights.cons,
         interviewQuestions: aiInsights.interviewQuestions,
+        resumeText: aiInsights.extractedResumeText || "",
       });
 
       return updateRes.data;

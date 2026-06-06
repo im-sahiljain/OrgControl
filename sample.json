@@ -1,0 +1,81 @@
+{
+  "_id": {
+    "$oid": "6a23125203ae71c98c500cae"
+  },
+  "orgId": {
+    "$oid": "6a2161415b2d4dbff95e7c0c"
+  },
+  "jobId": {
+    "$oid": "6a216a031c4e3e1cda3a58e6"
+  },
+  "name": "Nemo facilis vero qu",
+  "email": "rasuc@mailinator.com",
+  "phone": "+1 (483) 857-1025",
+  "resumeUrl": "https://res.cloudinary.com/dagkrnoap/image/upload/v1780683334/org-control/org_6a2161415b2d4dbff95e7c0c/job_6a216a031c4e3e1cda3a58e6/resumes/tpqnligxrncjpasyaba3.pdf",
+  "stage": "applied",
+  "isAiScreened": true,
+  "matchScore": 0,
+  "skills": [],
+  "summary": "The uploaded document is not a candidate resume for 'Nemo facilis vero qu'. It is a technical assessment task document from Indus Action outlining tasks for Software Development (REST API development), Database Management (SQL & Schema design), and Data Analysis. As a result, no candidate qualifications, experience, or skills could be evaluated for the Senior Backend Engineer (Node/Mongo) role.",
+  "pros": [],
+  "cons": [
+    "No candidate resume was provided in the uploaded document.",
+    "The uploaded document is a technical test instruction sheet."
+  ],
+  "interviewQuestions": [
+    {
+      "question": "Could you please submit your updated resume detailing your experience with Node.js and MongoDB?",
+      "focusArea": "Candidate Profile Verification",
+      "_id": {
+        "$oid": "6a23125203ae71c98c500caf"
+      }
+    }
+  ],
+  "resumeText": "Part 1: Software Development Task\n● Build a Basic REST API\n○ Develop a RESTful API using a language and framework of your choice (e.g., Python with Flask/Django, Node.js with Express, Java with Spring Boot). The API should support the following functionalities:\n■ Add Records: Accept JSON input to add a record to the system.\n■ Retrieve Records: Allow retrieval of all records, as well as filtering by a specific field (e.g., status or category).\n■ Update Records: Enable updating specific fields in a record.\n■ Delete Records: Provide the ability to delete a record by ID.\n○ Requirements:\n■ Use proper coding standards, including comments and error handling.\n■ Include basic authentication (e.g., an API key or token-based authentication).\n■ Document the API using Swagger or any similar tool.\n○ Deliverables:\n■ Source code hosted on GitHub (private repository with access granted to the hiring manager).\n■ Application hosted on cloud infrastructure/platform of your choice (e.g. Render, Netlify, Heroku)\n■ Instructions on how to run the application locally (e.g., README file).\n\nPart 2: Database Management Task\n● Database Design and Querying\n○ Create a database schema for a basic \"Order Management System\" that includes:\n■ Customers\n■ Orders\n■ Products\n■ Payments\n■ Relationships between these entities\n■ Populate Data: Insert sample data for 5 customers, 10 orders, and related products and payments.\n○ Write SQL queries to:\n■ Fetch the top 3 customers with the highest number of orders.\n■ Retrieve orders placed in the last 30 days.\n■ Calculate total revenue for each product.\n● Requirements:\n○ Submit the SQL file for schema creation and queries.\n○ Provide a brief explanation of your design choices and the purpose of each query.\n● Deliverables:\n○ SQL script file.\n○ Diagram of the database schema (e.g., an ER diagram).\n\nPart 3: Data Analysis Task\n● Analyse and Visualise Data\n○ You are provided with a dataset. The dataset contains information about user interactions with an e-commerce website, including:\n■ User ID\n■ Timestamp\n■ Action (e.g., viewed_product, added_to_cart, purchased)\n■ Product Category\n■ Revenue\n○ Tasks:\n■ Clean and preprocess the data:\n● Handle missing values.\n● Convert timestamps to a standard format.\n● Derive any necessary fields (e.g., session duration, category-wise totals).\n■ Perform the following analyses:\n● Identify the most popular product categories.\n● Calculate the conversion rate (i.e., percentage of purchased actions out of total interactions).\n● Visualise user behaviour trends over time (e.g., daily or weekly activity).\n● Provide insights and recommendations for improving conversion rates.\n○ Requirements:\n■ Use Python (e.g., Pandas, Matplotlib/Seaborn) or any other suitable tool.\n■ Submit a Jupyter Notebook or equivalent script.\n■ Include explanations for each step and insights derived.\n○ Deliverables:\n■ Python notebook/script with comments and outputs.\n■ PDF/HTML export of the notebook for easy review.",
+  "resumeEmbedding": [
+    -0.028363638, 0.022802036, 0.0025416282, -0.008662039, -0.013397734,
+    -0.00359364, 0.0053104474, 0.011123517, 0.009086775, -0.07553598,
+    -0.022752406, 0.00911223, 0.017111413, -0.0112246685, -0.011571701,
+    0.0063685467, 0.01749719, -0.031015415, -0.016642535, 0.010802624,
+    -0.017475607, -0.020358738, -0.01164092, 0.0023119396, -0.034967612,
+    0.03973844, 0.005537853, -0.024907488, -0.002416799, 0.11958994,
+    0.0048222207, 0.0054628123, -0.017412078, 0.0005985501, -0.013847232,
+    -0.010000808, 0.021645635, 0.019920854, 0.0008576924, 0.016856942,
+    0.010334607, 0.006062484, 0.011391032, 0.0062416554, -0.003952033,
+    0.00012308161, -0.010428993, -0.018000918, 0.024141137, -0.0048680305,
+    -0.006067433, -0.0062177456, 0.036023326, -0.01912305, -0.011700703,
+    -0.004110215, 0.015756821, -0.026759177, 0.018728632, -0.014640505,
+    -0.0076251444, -0.022319142, 0.042561512, -0.004265417, 0.011573458,
+    -0.0016366083, 0.008651525, 0.012755589, -0.00082005817, -0.0038589789,
+    0.013530181, -0.018101748, -0.012652541, 0.005885714, -0.008543892,
+    -0.021235542, -0.036544576, 0.0046746274, -0.029723523, 0.006826479,
+    0.011984956, -0.014367565, -0.017698571, 0.012387072, -0.006458812,
+    0.029739417, -0.004443292, -0.017053539, 0.012788472, 0.048933852,
+    -0.0034045356, 0.0093762735, -0.0047299312, -0.0071065263, -0.017486637,
+    -0.0102052195, 0.0113449525, 0.0021189044, -0.013865701, 0.006487444,
+    -0.033877622, 0.023085037, -0.007026692, 0.014872124, 0.012806647,
+    -0.017522974, 0.010958945, -0.006875179, -0.006356139, 0.0039640795,
+    -0.01967086, -0.16849212, -0.017414145, -0.023128282, 0.004034264,
+    -0.036168974, -0.0038675228, 0.010371476, 0.017083228, 0.0033619648,
+    0.017341191, 0.027845865, -0.027592875, -0.028628733, -0.006839891,
+    0.02561923, 0.031210197, -0.00828494, -0.00059799495, 0.0033455691,
+    -0.024338972, 0.037070427, -0.003194516, -0.0213974, -0.015379263,
+    -0.019116007, 0.0063433526, 0.023701282, 0.0075880727, -0.019378755,
+    -0.0027231427, -0.0036599168, -0.002395981, -0.017905595, -0.008457513,
+    0.034963764, -0.013575454, -0.0024882539, -0.009827585, 0.021479618,
+    0.026591612, 0.0066160304, 0.007907221, 0.009502847, -0.032717556,
+    -0.0048930966, -0.001620516, -0.003638464, 0.0022762804, 0.020737248,
+    0.013614262, -0.0135118365, -0.020103445, -0.0021994573, -0.016494934,
+    -0.010306827, -0.03369655, 0.024230914, -0.0111452965, 0.00990533,
+    -0.0046607335, 0.016242683, 0.004182906, -0.014988536, -0.008165565,
+    0.014408944, 0.005831767, 0.014517832, -0.0020594483, 0.00687126,
+    -0.012496134, -0.013715909, -0.011329967, -0.010487805, -0.010969401
+  ],
+  "createdAt": {
+    "$date": "2026-06-05T18:15:46.675Z"
+  },
+  "updatedAt": {
+    "$date": "2026-06-05T18:15:46.675Z"
+  },
+  "__v": 0
+}

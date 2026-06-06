@@ -108,6 +108,7 @@ export default function JobDetailPage() {
         cons: [] as string[],
         interviewQuestions: [] as any[],
         isAiScreened: false,
+        extractedResumeText: "",
       };
 
       try {
@@ -148,6 +149,7 @@ export default function JobDetailPage() {
         pros: aiInsights.pros,
         cons: aiInsights.cons,
         interviewQuestions: aiInsights.interviewQuestions,
+        resumeText: aiInsights.extractedResumeText || "",
       });
       return saveRes.data;
     },
