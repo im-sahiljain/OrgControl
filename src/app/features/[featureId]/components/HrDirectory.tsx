@@ -9,7 +9,7 @@ import Link from "next/link";
 import { useSelector } from "react-redux";
 import { RootState } from "@/app/reduxToolkit/store";
 import { resolveDepartmentRole, getFeatureAccessLevel } from "@/lib/roleResolver";
-
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 export default function HrDirectory({ feature }: { feature: DepartmentFeature }) {
   const user = useSelector((state: RootState) => state.employeeUI.user);
   const [searchTerm, setSearchTerm] = useState("");
@@ -76,16 +76,17 @@ export default function HrDirectory({ feature }: { feature: DepartmentFeature })
         </div>
         <div className="flex items-center gap-2">
           <Filter className="h-4 w-4 text-zinc-400" />
-          <select 
-            value={filterDept}
-            onChange={(e) => setFilterDept(e.target.value)}
-            className="px-3 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-sm font-semibold focus:outline-none"
-          >
-            <option value="all">All Departments</option>
-            {departments?.map((d: any) => (
-              <option key={d._id} value={d.name}>{d.name}</option>
-            ))}
-          </select>
+          <Select value={filterDept} onValueChange={setFilterDept}>
+            <SelectTrigger className="w-[180px] bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-sm font-semibold">
+              <SelectValue placeholder="All Departments" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Departments</SelectItem>
+              {departments?.map((d: any) => (
+                <SelectItem key={d._id} value={d.name}>{d.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

@@ -17,6 +17,8 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import toast from 'react-hot-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const ShowEmployess = () => {
   const queryClient = useQueryClient();
@@ -63,7 +65,7 @@ const ShowEmployess = () => {
       dispatch(closeDetailsModal());
     },
     onError: (error: any) => {
-      alert(error.response?.data?.error || "Failed to delete employee.");
+      toast.error(error.response?.data?.error || "Failed to delete employee.");
     },
   });
 
@@ -79,10 +81,10 @@ const ShowEmployess = () => {
       // Update selected employee details in Redux instantly
       dispatch(setSelectedEmployee(data.data));
       setEditingPromo(false);
-      alert("Promotion and reassignment logged successfully in the career lifecycle ledger.");
+      toast.success("Promotion and reassignment logged successfully in the career lifecycle ledger.");
     },
     onError: (err: any) => {
-      alert(err.response?.data?.error || "Failed to promote employee.");
+      toast.error(err.response?.data?.error || "Failed to promote employee.");
     },
   });
 
@@ -104,7 +106,7 @@ const ShowEmployess = () => {
         salary: Number(promoSalary) || 85000,
       });
     } else {
-      alert("Fields cannot be left blank.");
+      toast.error("Fields cannot be left blank.");
     }
   };
 
@@ -284,21 +286,22 @@ const ShowEmployess = () => {
 
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-zinc-400">Department</label>
-                  <select
-                    value={promoDept}
-                    onChange={(e) => setPromoDept(e.target.value)}
-                    className="w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-zinc-800 dark:text-zinc-100"
-                  >
-                    <option value="Engineering">Engineering</option>
-                    <option value="Design">Design</option>
-                    <option value="Marketing">Marketing</option>
-                    <option value="Human Resources">Human Resources</option>
-                    {departments?.map((d: any) => (
-                      <option key={d._id || d.id} value={d.name}>
-                        {d.name}
-                      </option>
-                    ))}
-                  </select>
+                  <Select value={promoDept} onValueChange={setPromoDept}>
+                    <SelectTrigger className="w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-zinc-800 dark:text-zinc-100 h-auto min-h-10">
+                      <SelectValue placeholder="Select Department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Engineering">Engineering</SelectItem>
+                      <SelectItem value="Design">Design</SelectItem>
+                      <SelectItem value="Marketing">Marketing</SelectItem>
+                      <SelectItem value="Human Resources">Human Resources</SelectItem>
+                      {departments?.map((d: any) => (
+                        <SelectItem key={d._id || d.id} value={d.name}>
+                          {d.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-1">

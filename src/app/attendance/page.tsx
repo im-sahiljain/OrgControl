@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { RootState } from "../reduxToolkit/store";
+import toast from 'react-hot-toast';
 
 export default function AttendancePage() {
   const user = useSelector((state: RootState) => state.employeeUI.user);
@@ -51,10 +52,10 @@ export default function AttendancePage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["employees"] });
-      alert("Employee logged out successfully in the active timesheet.");
+      toast.success("Employee logged out successfully in the active timesheet.");
     },
     onError: (error: any) => {
-      alert(error.response?.data?.error || "Failed to checkout employee.");
+      toast.error(error.response?.data?.error || "Failed to checkout employee.");
     },
   });
 

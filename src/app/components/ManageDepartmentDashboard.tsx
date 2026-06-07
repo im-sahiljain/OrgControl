@@ -5,6 +5,7 @@ import axios from "axios";
 import { Check, Loader2, Settings, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { RootState } from "../reduxToolkit/store";
+import toast from 'react-hot-toast';
 
 export default function ManageDepartmentDashboard({ 
   departmentId, 
@@ -57,7 +58,7 @@ export default function ManageDepartmentDashboard({
       onClose();
     },
     onError: (error) => {
-      alert("Failed to update dashboard widgets.");
+      toast.error("Failed to update dashboard widgets.");
       console.error(error);
     }
   });

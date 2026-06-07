@@ -128,3 +128,18 @@
     @apply font-sans;
   }
 }
+
+@keyframes marquee {
+  0% { transform: translate3d(0, 0, 0); }
+  15% { transform: translate3d(0, 0, 0); }
+  85% { transform: translate3d(var(--marquee-scroll-x, -50%), 0, 0); }
+  95% { transform: translate3d(var(--marquee-scroll-x, -50%), 0, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+
+@media (max-width: 640px) {
+  .animate-marquee-text {
+    display: inline-block;
+    animation: marquee 8s linear infinite;
+  }
+}

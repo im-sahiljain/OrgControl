@@ -202,7 +202,7 @@ export function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
         {isAuthenticated && user ? (
           <div className="flex items-center gap-3">
             <Link
-              href={user.role === "platform_admin" ? "#" : "/dashboard/profile"}
+              href="/dashboard/profile"
               className="flex items-center gap-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 p-1.5 pr-3 rounded-full transition-all cursor-pointer border border-transparent hover:border-zinc-200 dark:hover:border-zinc-800"
             >
               <div className="text-right hidden sm:block">

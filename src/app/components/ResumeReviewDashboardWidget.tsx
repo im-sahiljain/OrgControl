@@ -4,23 +4,129 @@ import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import Link from "next/link";
-import { 
-  Users, Sparkles, FileText, CheckCircle, ArrowRight, TrendingUp, 
-  Clock, Briefcase, ChevronRight 
+import {
+  Users,
+  Sparkles,
+  FileText,
+  ArrowRight,
+  TrendingUp,
+  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { motion } from "framer-motion";
+
+const AutoScrollText = React.memo(({ text, className }: { text: string; className?: string }) => {
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const textRef = React.useRef<HTMLSpanElement>(null);
+  const [scrollAmount, setScrollAmount] = React.useState(0);
+  const [shouldScroll, setShouldScroll] = React.useState(false);
+  const [isMobile, setIsMobile] = React.useState(false);
+
+  const [delay] = React.useState(() => Math.random() * 2);
+
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      setIsMobile(window.innerWidth < 640);
+      const handleResize = () => setIsMobile(window.innerWidth < 640);
+      window.addEventListener("resize", handleResize);
+      return () => window.removeEventListener("resize", handleResize);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    const checkScroll = () => {
+      const container = containerRef.current;
+      const textEl = textRef.current;
+      if (container && textEl) {
+        const diff = container.offsetWidth - textEl.offsetWidth;
+        if (diff < 0) {
+          setScrollAmount(diff);
+          setShouldScroll(true);
+        } else {
+          setScrollAmount(0);
+          setShouldScroll(false);
+        }
+      }
+    };
+
+    checkScroll();
+    const timeoutId = setTimeout(checkScroll, 100);
+    return () => clearTimeout(timeoutId);
+  }, [text, isMobile]);
+
+  const speed = 30; // pixels per second
+  const holdStart = 2; // hold at start (seconds)
+  const holdEnd = 2; // hold at end (seconds)
+  const scrollTime = shouldScroll ? Math.abs(scrollAmount) / speed : 0;
+  const duration = holdStart + scrollTime + holdEnd;
+
+  const startFraction = duration > 0 ? holdStart / duration : 0.25;
+  const endFraction = duration > 0 ? (holdStart + scrollTime) / duration : 0.75;
+
+  const isAppliedFor = text.startsWith("Applied for:");
+  const displayText = isAppliedFor ? text.substring(12).trim() : text;
+
+  return (
+    <div
+      ref={containerRef}
+      className={`overflow-hidden whitespace-nowrap w-full ${className || ""}`}
+    >
+      <motion.span
+        ref={textRef}
+        className="inline-block"
+        animate={
+          isMobile && shouldScroll
+            ? { x: [0, 0, scrollAmount, scrollAmount] }
+            : { x: 0 }
+        }
+        transition={
+          isMobile && shouldScroll
+            ? {
+                ease: "linear",
+                duration: duration,
+                repeat: Infinity,
+                repeatType: "loop",
+                delay: delay,
+                times: [0, startFraction, endFraction, 1],
+              }
+            : undefined
+        }
+      >
+        {isAppliedFor && <span className="text-zinc-400 font-semibold">Applied for: </span>}
+        <span className={isAppliedFor ? "text-zinc-550 dark:text-zinc-300 font-bold" : ""}>
+          {displayText}
+        </span>
+      </motion.span>
+    </div>
+  );
+});
+
+AutoScrollText.displayName = "AutoScrollText";
 
 interface ResumeReviewDashboardWidgetProps {
   orgId: string;
 }
 
-export default function ResumeReviewDashboardWidget({ orgId }: ResumeReviewDashboardWidgetProps) {
-  // 1. Fetch candidates
-  const { data: candidates, isLoading: loadingCandidates } = useQuery({
-    queryKey: ["dashboard-all-candidates", orgId],
+export default function ResumeReviewDashboardWidget({
+  orgId,
+}: ResumeReviewDashboardWidgetProps) {
+  // 1. Fetch dashboard metrics counts
+  const {
+    data: metrics,
+    isLoading: loadingMetrics,
+    isError: metricsError,
+  } = useQuery({
+    queryKey: ["dashboard-metrics", orgId],
     queryFn: async () => {
-      const res = await axios.get(`/api/candidates?orgId=${orgId}`);
-      return res.data.data || [];
+      const res = await axios.get(`/api/dashboard-metrics?orgId=${orgId}`);
+      return (
+        res.data.data || {
+          totalResumes: 0,
+          pendingScreenings: 0,
+          highMatches: 0,
+          avgMatchScore: 0,
+        }
+      );
     },
     enabled: !!orgId,
   });
@@ -35,42 +141,47 @@ export default function ResumeReviewDashboardWidget({ orgId }: ResumeReviewDashb
     enabled: !!orgId,
   });
 
-  const isLoading = loadingCandidates || loadingJobs;
+  // 3. Keep full candidates data for the recent applicants list only
+  const { data: candidates, isLoading: loadingCandidates } = useQuery({
+    queryKey: ["dashboard-recent-candidates", orgId],
+    queryFn: async () => {
+      const res = await axios.get(`/api/candidates?orgId=${orgId}`);
+      return res.data.data || [];
+    },
+    enabled: !!orgId,
+  });
 
-  if (isLoading) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 animate-pulse">
-        {[1, 2, 3, 4].map((n) => (
-          <div key={n} className="h-28 bg-zinc-150 dark:bg-zinc-800 rounded-2xl"></div>
-        ))}
-      </div>
-    );
-  }
+  const isLoading = loadingMetrics || loadingCandidates || loadingJobs;
 
-  // Calculate metrics
-  const totalResumes = candidates?.length || 0;
-  const pendingScreenings = candidates?.filter((c: any) => !c.isAiScreened).length || 0;
-  const highMatches = candidates?.filter((c: any) => c.isAiScreened && c.matchScore >= 80).length || 0;
-  
-  const screenedCandidates = candidates?.filter((c: any) => c.isAiScreened && c.matchScore > 0) || [];
-  const avgMatchScore = screenedCandidates.length 
-    ? Math.round(screenedCandidates.reduce((acc: number, cur: any) => acc + cur.matchScore, 0) / screenedCandidates.length)
-    : 0;
+  const totalResumes = metrics?.totalResumes ?? 0;
+  const pendingScreenings = metrics?.pendingScreenings ?? 0;
+  const highMatches = metrics?.highMatches ?? 0;
+  const avgMatchScore = metrics?.avgMatchScore ?? 0;
 
-  // Recent 5 applicants
   const recentApplicants = candidates?.slice(0, 5) || [];
+
+  console.log("totalResumes", totalResumes);
 
   return (
     <div className="space-y-6">
       {/* Metrics Row */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        
         {/* Metric 1: Total Candidates */}
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow">
-          <div className="space-y-1">
-            <span className="text-xs text-zinc-400 font-bold block uppercase tracking-wider">Total Resumes</span>
-            <h3 className="text-2xl font-bold text-zinc-850 dark:text-zinc-50">{totalResumes} Candidates</h3>
-            <span className="text-xxs text-zinc-400 font-medium">Applied database pool</span>
+          <div className="space-y-1 flex-1">
+            <span className="text-xs text-zinc-400 font-bold block uppercase tracking-wider">
+              Total Resumes
+            </span>
+            {isLoading ? (
+              <div className="h-7 bg-zinc-200 dark:bg-zinc-800 rounded w-28 animate-pulse mt-1" />
+            ) : (
+              <p className="text-xl font-bold text-zinc-850 dark:text-zinc-50">
+                {totalResumes} Candidates
+              </p>
+            )}
+            <span className="text-sm text-zinc-400 font-medium">
+              Applied database pool
+            </span>
           </div>
           <div className="p-3 bg-blue-50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 rounded-xl">
             <FileText className="h-5 w-5" />
@@ -79,10 +190,20 @@ export default function ResumeReviewDashboardWidget({ orgId }: ResumeReviewDashb
 
         {/* Metric 2: Pending Screenings */}
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow">
-          <div className="space-y-1">
-            <span className="text-xs text-zinc-400 font-bold block uppercase tracking-wider">Pending AI Review</span>
-            <h3 className="text-2xl font-bold text-zinc-850 dark:text-zinc-50">{pendingScreenings} Unscreened</h3>
-            <span className="text-xxs text-amber-500 font-bold">Needs AI assessment</span>
+          <div className="space-y-1 flex-1">
+            <span className="text-xs text-zinc-400 font-bold block uppercase tracking-wider">
+              Pending AI Review
+            </span>
+            {isLoading ? (
+              <div className="h-7 bg-zinc-200 dark:bg-zinc-800 rounded w-28 animate-pulse mt-1" />
+            ) : (
+              <p className="text-xl font-bold text-zinc-850 dark:text-zinc-50">
+                {pendingScreenings} Unscreened
+              </p>
+            )}
+            <span className="text-sm text-amber-500 font-bold">
+              Needs AI assessment
+            </span>
           </div>
           <div className="p-3 bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 rounded-xl">
             <Clock className="h-5 w-5 animate-pulse" />
@@ -91,10 +212,20 @@ export default function ResumeReviewDashboardWidget({ orgId }: ResumeReviewDashb
 
         {/* Metric 3: High Match Rates */}
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow">
-          <div className="space-y-1">
-            <span className="text-xs text-zinc-400 font-bold block uppercase tracking-wider">High Match Candidates</span>
-            <h3 className="text-2xl font-bold text-zinc-850 dark:text-zinc-50">{highMatches} Profiles</h3>
-            <span className="text-xxs text-emerald-500 font-bold">Match Score &ge; 80%</span>
+          <div className="space-y-1 flex-1">
+            <span className="text-xs text-zinc-400 font-bold block uppercase tracking-wider lg:whitespace-nowrap">
+              High Match Candidates
+            </span>
+            {isLoading ? (
+              <div className="h-7 bg-zinc-200 dark:bg-zinc-800 rounded w-28 animate-pulse mt-1" />
+            ) : (
+              <p className="text-xl font-bold text-zinc-850 dark:text-zinc-50">
+                {highMatches} Profiles
+              </p>
+            )}
+            <span className="text-sm text-emerald-500 font-bold">
+              Match Score &ge; 80%
+            </span>
           </div>
           <div className="p-3 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 rounded-xl">
             <TrendingUp className="h-5 w-5" />
@@ -103,56 +234,88 @@ export default function ResumeReviewDashboardWidget({ orgId }: ResumeReviewDashb
 
         {/* Metric 4: Average Score */}
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow">
-          <div className="space-y-1">
-            <span className="text-xs text-zinc-400 font-bold block uppercase tracking-wider">Avg Profile Match</span>
-            <h3 className="text-2xl font-bold text-zinc-850 dark:text-zinc-50">{avgMatchScore}%</h3>
-            <span className="text-xxs text-violet-500 font-bold">Aggregate match rate</span>
+          <div className="space-y-1 flex-1">
+            <span className="text-xs text-zinc-400 font-bold block uppercase tracking-wider">
+              Avg Profile Match
+            </span>
+            {isLoading ? (
+              <div className="h-7 bg-zinc-200 dark:bg-zinc-800 rounded w-28 animate-pulse mt-1" />
+            ) : (
+              <p className="text-xl font-bold text-zinc-850 dark:text-zinc-50">
+                {avgMatchScore}%
+              </p>
+            )}
+            <span className="text-sm text-violet-500 font-bold">
+              Aggregate match rate
+            </span>
           </div>
           <div className="p-3 bg-violet-50 dark:bg-violet-950/20 text-violet-600 dark:text-violet-400 rounded-xl">
             <Sparkles className="h-5 w-5" />
           </div>
         </div>
-
       </div>
 
       {/* Recruiter Workspace Quick Links & Activity Panel */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
         {/* Recent Applications List */}
         <div className="lg:col-span-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 shadow-sm space-y-4">
           <div className="flex justify-between items-center border-b border-zinc-100 dark:border-zinc-850 pb-3">
-            <h3 className="font-bold text-sm text-zinc-900 dark:text-zinc-50 flex items-center gap-2">
+            <p className="font-bold text-sm text-zinc-900 dark:text-zinc-50 flex items-center gap-2">
               <Users className="h-4.5 w-4.5 text-blue-600" />
               Recent Applicants Activity
-            </h3>
-            <Link href="/features/hr_recruitment" className="text-xxs font-bold text-blue-600 hover:text-blue-700 hover:underline">
+            </p>
+            <Link
+              href="/features/hr_recruitment"
+              className="text-xxs font-bold text-blue-600 hover:text-blue-700 hover:underline"
+            >
               View All
             </Link>
           </div>
 
           <div className="space-y-3">
-            {recentApplicants.length > 0 ? (
+            {isLoading ? (
+              [1, 2, 3, 4, 5].map((i) => (
+                <div
+                  key={i}
+                  className="p-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-150 dark:border-zinc-850/60 rounded-xl flex items-center justify-between gap-4 animate-pulse"
+                >
+                  <div className="space-y-2 flex-1">
+                    <div className="h-4 bg-zinc-200 dark:bg-zinc-850 rounded w-1/3" />
+                    <div className="h-3 bg-zinc-200 dark:bg-zinc-800 rounded w-1/2" />
+                  </div>
+                  <div className="h-6 bg-zinc-200 dark:bg-zinc-800 rounded w-20" />
+                </div>
+              ))
+            ) : recentApplicants.length > 0 ? (
               recentApplicants.map((cand: any) => {
-                const jobTitle = jobs?.find((j: any) => j._id === cand.jobId)?.title || "Position";
+                const jobTitle =
+                  jobs?.find((j: any) => j._id === cand.jobId)?.title ||
+                  "Position";
                 return (
-                  <div 
+                  <div
                     key={cand._id}
                     className="p-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-150 dark:border-zinc-850/60 rounded-xl flex items-center justify-between gap-4 text-xs"
                   >
-                    <div className="space-y-0.5 overflow-hidden">
-                      <span className="font-bold text-zinc-800 dark:text-zinc-100 block truncate">{cand.name}</span>
-                      <span className="text-[10px] text-zinc-400 font-semibold block truncate">
-                        Applied for: <span className="text-zinc-500 dark:text-zinc-300 font-bold">{jobTitle}</span>
-                      </span>
+                    <div className="space-y-0.5 overflow-hidden w-full max-w-[150px] sm:max-w-none">
+                      <div className="font-bold text-zinc-800 dark:text-zinc-100 block w-full overflow-hidden">
+                        <AutoScrollText text={cand.name} />
+                      </div>
+                      <div className="text-[10px] text-zinc-400 font-semibold w-full overflow-hidden">
+                        <AutoScrollText text={`Applied for: ${jobTitle}`} />
+                      </div>
                     </div>
 
                     <div className="flex items-center gap-3 shrink-0">
                       {cand.isAiScreened ? (
-                        <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded ${
-                          cand.matchScore >= 80 ? "bg-emerald-50 text-emerald-600 border border-emerald-100" :
-                          cand.matchScore >= 70 ? "bg-purple-50 text-purple-600 border border-purple-100" :
-                          "bg-zinc-50 text-zinc-500 border border-zinc-100"
-                        }`}>
+                        <span
+                          className={`text-[10px] font-extrabold px-2 py-0.5 rounded ${
+                            cand.matchScore >= 80
+                              ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                              : cand.matchScore >= 70
+                                ? "bg-purple-50 text-purple-600 border border-purple-100"
+                                : "bg-zinc-50 text-zinc-500 border border-zinc-100"
+                          }`}
+                        >
                           {cand.matchScore}% Match
                         </span>
                       ) : (
@@ -160,7 +323,7 @@ export default function ResumeReviewDashboardWidget({ orgId }: ResumeReviewDashb
                           Pending AI Review
                         </span>
                       )}
-                      
+
                       <span className="text-[10px] font-bold text-zinc-400 capitalize bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-2 py-0.5 rounded shadow-sm">
                         {cand.stage}
                       </span>
@@ -177,12 +340,17 @@ export default function ResumeReviewDashboardWidget({ orgId }: ResumeReviewDashb
         </div>
 
         {/* Recruiter Toolbox Shortcuts */}
-        <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-zinc-900 dark:to-zinc-950 border border-indigo-100/60 dark:border-zinc-850 rounded-2xl p-6 shadow-sm flex flex-col justify-between h-full min-h-[220px]">
+        <div className="bg-linear-to-br from-indigo-50 to-purple-50 dark:from-zinc-900 dark:to-zinc-950 border border-indigo-100/60 dark:border-zinc-850 rounded-2xl p-6 shadow-sm flex flex-col justify-between h-full min-h-[220px]">
           <div className="space-y-2">
-            <span className="text-xxs font-extrabold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest block">Recruiter Shortcuts</span>
-            <h3 className="font-bold text-sm text-zinc-900 dark:text-zinc-50">Manage Job Postings</h3>
+            <span className="text-xxs font-extrabold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest block">
+              Recruiter Shortcuts
+            </span>
+            <p className="font-bold text-sm text-zinc-900 dark:text-zinc-50">
+              Manage Job Postings
+            </p>
             <p className="text-xs text-zinc-500 leading-relaxed">
-              Create new roles, view applicant counts, and trigger screening algorithms from the workspace.
+              Create new roles, view applicant counts, and trigger screening
+              algorithms from the workspace.
             </p>
           </div>
 
@@ -193,13 +361,16 @@ export default function ResumeReviewDashboardWidget({ orgId }: ResumeReviewDashb
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
-            
-            <Link href={`/${orgId}/jobs`} target="_blank" className="block text-center text-xs font-bold text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 py-1.5 transition-colors">
+
+            <Link
+              href={`/${orgId}/jobs`}
+              target="_blank"
+              className="block text-center text-xs font-bold text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 py-1.5 transition-colors"
+            >
               View Public Careers Portal
             </Link>
           </div>
         </div>
-
       </div>
     </div>
   );

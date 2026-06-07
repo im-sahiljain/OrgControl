@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { UserPlus, Image as ImageIcon, Loader2 } from "lucide-react";
 import type { RootState } from "../reduxToolkit/store";
+import toast from 'react-hot-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const AddEmployees = () => {
   const user = useSelector((state: RootState) => state.employeeUI.user);
@@ -56,7 +58,7 @@ const AddEmployees = () => {
       setUploading(false);
     },
     onError: () => {
-      alert("Failed to upload image. Please try again.");
+      toast.error("Failed to upload image. Please try again.");
       setUploading(false);
     },
   });
@@ -93,7 +95,7 @@ const AddEmployees = () => {
       setDepartment("Unassigned");
     },
     onError: (error: any) => {
-      alert(error.response?.data?.error || "Failed to create employee.");
+      toast.error(error.response?.data?.error || "Failed to create employee.");
     },
   });
 
@@ -109,7 +111,7 @@ const AddEmployees = () => {
         profilePhoto,
       });
     } else {
-      alert("Please fill all the mandatory fields (Name, Age, Position)");
+      toast.error("Please fill all the mandatory fields (Name, Age, Position)");
     }
   };
 
@@ -161,18 +163,18 @@ const AddEmployees = () => {
             <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
               Position <span className="text-red-500">*</span>
             </label>
-            <select
-              value={empPosition}
-              onChange={(e) => setEmpPosition(e.target.value)}
-              className="w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-zinc-800 dark:text-zinc-100 h-[38px]"
-            >
-              <option value="" disabled>-- Select Formal Position --</option>
-              {positions?.map((p: any) => (
-                <option key={p._id || p.id} value={p.title}>
-                  {p.title} {p.department !== "Unassigned" ? `(${p.department})` : ""}
-                </option>
-              ))}
-            </select>
+            <Select value={empPosition} onValueChange={setEmpPosition}>
+              <SelectTrigger className="w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-zinc-800 dark:text-zinc-100 h-[38px]">
+                <SelectValue placeholder="-- Select Formal Position --" />
+              </SelectTrigger>
+              <SelectContent>
+                {positions?.map((p: any) => (
+                  <SelectItem key={p._id || p.id} value={p.title}>
+                    {p.title} {p.department !== "Unassigned" ? `(${p.department})` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
@@ -208,18 +210,19 @@ const AddEmployees = () => {
           <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
             Department (Optional fallback allowed)
           </label>
-          <select
-            value={department}
-            onChange={(e) => setDepartment(e.target.value)}
-            className="w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-zinc-800 dark:text-zinc-100"
-          >
-            <option value="Unassigned">-- Unassigned (First Employee) --</option>
-            {departments?.map((d: any) => (
-              <option key={d._id || d.id} value={d.name}>
-                {d.name}
-              </option>
-            ))}
-          </select>
+          <Select value={department} onValueChange={setDepartment}>
+            <SelectTrigger className="w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-zinc-800 dark:text-zinc-100 h-auto min-h-10">
+              <SelectValue placeholder="-- Unassigned (First Employee) --" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Unassigned">-- Unassigned (First Employee) --</SelectItem>
+              {departments?.map((d: any) => (
+                <SelectItem key={d._id || d.id} value={d.name}>
+                  {d.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Profile Image Cloudinary Upload */}

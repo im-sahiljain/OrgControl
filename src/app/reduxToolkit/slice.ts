@@ -21,12 +21,14 @@ export interface UserSession {
   orgId: string;
   department?: string;
   position?: string;
+  isSandbox?: boolean;
 }
 
 export interface EmployeeUIState {
   selectedEmployee: Employee | null;
   isDetailsOpen: boolean;
   searchFilter: string;
+  isSidebarCollapsed: boolean;
   
   // Authentication parameters
   isAuthenticated: boolean;
@@ -37,6 +39,7 @@ export const initialUIState: EmployeeUIState = {
   selectedEmployee: null,
   isDetailsOpen: false,
   searchFilter: "",
+  isSidebarCollapsed: false,
   
   // Default to unauthenticated — users must select a profile on the login page
   isAuthenticated: false,
@@ -81,6 +84,18 @@ export const employeeUISlice = createSlice({
         localStorage.setItem("org_control_user", JSON.stringify(action.payload));
       }
     },
+    toggleSidebar: (state) => {
+      state.isSidebarCollapsed = !state.isSidebarCollapsed;
+      if (typeof window !== "undefined") {
+        localStorage.setItem("sidebar_collapsed", String(state.isSidebarCollapsed));
+      }
+    },
+    setSidebarCollapsed: (state, action: PayloadAction<boolean>) => {
+      state.isSidebarCollapsed = action.payload;
+      if (typeof window !== "undefined") {
+        localStorage.setItem("sidebar_collapsed", String(action.payload));
+      }
+    },
   },
 });
 
@@ -91,6 +106,8 @@ export const {
   loginUser,
   logoutUser,
   setAuthSession,
+  toggleSidebar,
+  setSidebarCollapsed,
 } = employeeUISlice.actions;
 
 export const employeeUIReducer = employeeUISlice.reducer;

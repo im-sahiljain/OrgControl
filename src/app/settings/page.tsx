@@ -3,6 +3,8 @@
 import React, { useState } from "react";
 import { Settings, Shield, Globe, Award, Cloud, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import toast from 'react-hot-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function SettingsPage() {
   const [mfaEnabled, setMfaEnabled] = useState<boolean>(false);
@@ -11,7 +13,7 @@ export default function SettingsPage() {
   const [companyName, setCompanyName] = useState<string>("SaaS Maker Sandbox");
 
   const handleSave = () => {
-    alert("Configuration parameters updated successfully in the tenant metadata.");
+    toast.success("Configuration parameters updated successfully in the tenant metadata.");
   };
 
   return (
@@ -33,14 +35,14 @@ export default function SettingsPage() {
             General Profile
           </button>
           <button
-            onClick={() => alert("MFA settings locked. Premium sandbox only.")}
+            onClick={() => toast("MFA settings locked. Premium sandbox only.")}
             className="w-full flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-lg text-zinc-600 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:bg-zinc-900/50 text-left"
           >
             <Shield className="h-4.5 w-4.5" />
             Security & MFA
           </button>
           <button
-            onClick={() => alert("Billing records locked. Standard Developer tier active.")}
+            onClick={() => toast("Billing records locked. Standard Developer tier active.")}
             className="w-full flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-lg text-zinc-600 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:bg-zinc-900/50 text-left"
           >
             <CreditCard className="h-4.5 w-4.5" />
@@ -71,28 +73,30 @@ export default function SettingsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-zinc-400">TimeZone</label>
-                  <select
-                    value={timezone}
-                    onChange={(e) => setTimezone(e.target.value)}
-                    className="w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="America/New_York">EST (New York)</option>
-                    <option value="Asia/Kolkata">IST (Kolkata)</option>
-                    <option value="Europe/London">GMT (London)</option>
-                  </select>
+                  <Select value={timezone} onValueChange={setTimezone}>
+                    <SelectTrigger className="w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 h-auto min-h-10">
+                      <SelectValue placeholder="Select Timezone" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="America/New_York">EST (New York)</SelectItem>
+                      <SelectItem value="Asia/Kolkata">IST (Kolkata)</SelectItem>
+                      <SelectItem value="Europe/London">GMT (London)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-zinc-400">Preferred Currency</label>
-                  <select
-                    value={currency}
-                    onChange={(e) => setCurrency(e.target.value)}
-                    className="w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="USD">USD ($)</option>
-                    <option value="INR">INR (₹)</option>
-                    <option value="GBP">GBP (£)</option>
-                  </select>
+                  <Select value={currency} onValueChange={setCurrency}>
+                    <SelectTrigger className="w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 h-auto min-h-10">
+                      <SelectValue placeholder="Select Currency" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="USD">USD ($)</SelectItem>
+                      <SelectItem value="INR">INR (₹)</SelectItem>
+                      <SelectItem value="GBP">GBP (£)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>

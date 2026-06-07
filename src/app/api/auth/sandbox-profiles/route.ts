@@ -16,7 +16,7 @@ export async function GET() {
     // Fetch only HR employees (no passwords or sensitive data like salaries)
     const hrEmployees = await Employee.find(
       { orgId: org._id.toString(), department: "Human Resources" },
-      { empName: 1, email: 1, department: 1, empPosition: 1 }
+      { empName: 1, email: 1, department: 1, empPosition: 1, orgId: 1 }
     ).lean();
 
     return NextResponse.json({ success: true, data: hrEmployees });

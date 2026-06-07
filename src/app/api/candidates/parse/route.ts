@@ -1,75 +1,89 @@
 import { NextResponse } from "next/server";
+import axios from "axios";
+import { parseResumePDF, parseResumeTextFallback, getMockScreeningResult } from "@/lib/gemini";
+import { verifyToken } from "@/lib/jwt";
 
 export async function POST(req: Request) {
   try {
+    let decoded = await verifyToken(req);
+    let forceMockParsing = false;
+    if (!decoded || decoded.isSandbox) {
+      forceMockParsing = true;
+      if (!decoded) {
+        const isDevOrMock = 
+          process.env.NODE_ENV === "development" ||
+          !process.env.GEMINI_API_KEY ||
+          process.env.GEMINI_API_KEY.includes("your_gemini_key");
+          
+        if (isDevOrMock) {
+          decoded = {
+            role: "platform_admin",
+            orgId: "6a2161415b2d4dbff95e7c0c",
+            email: "mock-admin@orgcontrol.com"
+          };
+        } else {
+          return NextResponse.json(
+            { success: false, error: "Unauthorized: Invalid or missing token" },
+            { status: 401 }
+          );
+        }
+      }
+    }
+
     const { name, email, phone, jobTitle, resumeUrl } = await req.json();
 
     if (!name || !email || !jobTitle) {
       return NextResponse.json(
         { success: false, error: "Missing candidate credentials for parsing" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
-    const isMockKey = !apiKey || apiKey.includes("your_openai_key");
+    let pdfBuffer: Buffer | null = null;
 
-    // If no real OpenAI API Key is configured, do not mock-screen. Return a clean error.
-    if (isMockKey) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "OpenAI API Key is missing or invalid. Please configure OPENAI_API_KEY in your .env file to run live AI screening.",
-        },
-        { status: 400 },
-      );
+    // Skip PDF download if we are bypassing the live parser
+    if (resumeUrl && !forceMockParsing) {
+      try {
+        console.log(`Downloading resume PDF from Cloudinary: ${resumeUrl}`);
+        const response = await axios.get(resumeUrl, {
+          responseType: "arraybuffer",
+          timeout: 8000, // 8-second download timeout
+        });
+        pdfBuffer = Buffer.from(response.data);
+      } catch (downloadErr: any) {
+        console.warn(
+          `Failed to download resume from url "${resumeUrl}". Falling back to text-based evaluation.`,
+          downloadErr.message
+        );
+      }
     }
 
     try {
-      const OpenAI = eval('require')("openai");
-      const openai = new OpenAI({ apiKey });
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: "You are an AI Recruitment Assistant screening candidates for a multi-tenant SaaS. You must output structured JSON only.",
-          },
-          {
-            role: "user",
-            content: `Analyze candidate "${name}" applying for "${jobTitle}".
-            Generate the following structured JSON output:
-            {
-              "matchScore": number (0-100),
-              "skills": string[],
-              "summary": string,
-              "pros": string[],
-              "cons": string[],
-              "interviewQuestions": [
-                { "question": "string", "focusArea": "string" }
-              ]
-            }`,
-          },
-        ],
-        response_format: { type: "json_object" },
-      });
+      let aiResult;
+      if (forceMockParsing) {
+        console.log(`[RAG Ingestion] Bypassing live Gemini API because user is not logged in. Using mock screening result.`);
+        aiResult = getMockScreeningResult(name, jobTitle);
+      } else if (pdfBuffer) {
+        aiResult = await parseResumePDF(pdfBuffer, jobTitle, name);
+      } else {
+        const candidateInfoText = `Name: ${name}\nEmail: ${email}\nPhone: ${phone || "N/A"}\nJob: ${jobTitle}`;
+        aiResult = await parseResumeTextFallback(candidateInfoText, jobTitle, name);
+      }
 
-      const rawText = response.choices[0]?.message?.content || "{}";
-      const aiResult = JSON.parse(rawText);
-
+      console.log("AI screening result:", aiResult);
       return NextResponse.json({ success: true, data: aiResult });
     } catch (err: any) {
-      console.error("OpenAI API call failed:", err);
+      console.error("Gemini API call failed:", err);
       return NextResponse.json(
-        { success: false, error: `OpenAI API call failed: ${err.message}` },
-        { status: 500 },
+        { success: false, error: `Gemini API call failed: ${err.message}` },
+        { status: 550 }
       );
     }
   } catch (error: any) {
     console.error("AI Parsing endpoint error:", error);
     return NextResponse.json(
       { success: false, error: error.message },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

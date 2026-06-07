@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import {
   Home,
   Users,
@@ -16,14 +16,29 @@ import {
   LogOut,
   Plus,
   UserPlus,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import type { RootState } from "../../app/reduxToolkit/store";
+import { toggleSidebar } from "../../app/reduxToolkit/slice";
 
-export function Sidebar({ isOpen = false, onClose }: { isOpen?: boolean; onClose?: () => void }) {
+export function Sidebar({
+  isOpen = false,
+  onClose,
+  enableTransition = false,
+}: {
+  isOpen?: boolean;
+  onClose?: () => void;
+  enableTransition?: boolean;
+}) {
   const pathname = usePathname();
+  const dispatch = useDispatch();
   const user = useSelector((state: RootState) => state.employeeUI.user);
   const isAuthenticated = useSelector(
     (state: RootState) => state.employeeUI.isAuthenticated,
+  );
+  const isCollapsed = useSelector(
+    (state: RootState) => state.employeeUI.isSidebarCollapsed,
   );
 
   // Filter main nav items dynamically based on the active session role
@@ -126,13 +141,24 @@ export function Sidebar({ isOpen = false, onClose }: { isOpen?: boolean; onClose
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-20 w-64 border-r border-zinc-200 bg-white/70 backdrop-blur-md dark:border-zinc-800 dark:bg-black/50 hidden md:block">
-        <div className="flex h-full flex-col px-4 py-6">
-          <div className="flex items-center gap-2 mb-8 px-2">
-            <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold">
+      <aside suppressHydrationWarning className={`fixed inset-y-0 left-0 z-20 border-r border-zinc-200 bg-white/70 backdrop-blur-md dark:border-zinc-800 dark:bg-black/50 hidden md:block ${enableTransition ? "transition-all duration-300" : ""} ${isCollapsed ? "w-20" : "w-64"}`}>
+        {/* Floating Toggle Button */}
+        <button
+          suppressHydrationWarning
+          onClick={() => dispatch(toggleSidebar())}
+          className="absolute top-8 -right-3.5 z-30 h-7 w-7 rounded-full border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 flex items-center justify-center text-zinc-500 hover:text-zinc-850 shadow-sm cursor-pointer"
+          title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+        >
+          <ChevronRight className={`h-4 w-4 absolute ${enableTransition ? "transition-all duration-200" : ""} ${isCollapsed ? "opacity-100 scale-100" : "opacity-0 scale-0"}`} />
+          <ChevronLeft className={`h-4 w-4 absolute ${enableTransition ? "transition-all duration-200" : ""} ${isCollapsed ? "opacity-0 scale-0" : "opacity-100 scale-100"}`} />
+        </button>
+
+        <div className="flex h-full flex-col px-4 py-6 relative">
+          <div suppressHydrationWarning className={`flex items-center gap-2 mb-8 px-2 ${isCollapsed ? "justify-center" : ""}`}>
+            <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold shrink-0">
               O
             </div>
-            <span className="text-xl font-semibold tracking-tight">
+            <span suppressHydrationWarning className={`text-xl font-semibold tracking-tight whitespace-nowrap ${enableTransition ? "transition-all duration-300" : ""} ${isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100 w-auto"}`}>
               Org Control
             </span>
           </div>
@@ -144,16 +170,22 @@ export function Sidebar({ isOpen = false, onClose }: { isOpen?: boolean; onClose
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all ${
+                  title={isCollapsed ? item.name : undefined}
+                  suppressHydrationWarning
+                  className={`flex items-center ${enableTransition ? "transition-all duration-300" : ""} ${
+                    isCollapsed ? "justify-center p-2 mx-auto w-10 h-10 rounded-lg" : "gap-3 px-3 py-2 rounded-lg"
+                  } ${
                     isActive
                       ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-900/50 dark:text-zinc-50"
                       : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900/50 dark:hover:text-zinc-50"
                   }`}
                 >
                   <item.icon
-                    className={`h-5 w-5 ${isActive ? "text-zinc-900 dark:text-zinc-100" : "text-zinc-500 dark:text-zinc-400"}`}
+                    className={`h-5 w-5 shrink-0 ${isActive ? "text-zinc-900 dark:text-zinc-100" : "text-zinc-500 dark:text-zinc-400"}`}
                   />
-                  <span className="font-medium text-sm">{item.name}</span>
+                  <span suppressHydrationWarning className={`font-medium text-sm whitespace-nowrap ${enableTransition ? "transition-all duration-300" : ""} ${isCollapsed ? "opacity-0 w-0 overflow-hidden ml-0" : "opacity-100 w-auto ml-3"}`}>
+                    {item.name}
+                  </span>
                 </Link>
               );
             })}
@@ -166,16 +198,22 @@ export function Sidebar({ isOpen = false, onClose }: { isOpen?: boolean; onClose
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all ${
+                  title={isCollapsed ? item.name : undefined}
+                  suppressHydrationWarning
+                  className={`flex items-center ${enableTransition ? "transition-all duration-300" : ""} ${
+                    isCollapsed ? "justify-center p-2 mx-auto w-10 h-10 rounded-lg" : "gap-3 px-3 py-2 rounded-lg"
+                  } ${
                     isActive
                       ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-900/50 dark:text-zinc-50"
                       : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900/50 dark:hover:text-zinc-50"
                   }`}
                 >
                   <item.icon
-                    className={`h-5 w-5 ${isActive ? "text-zinc-900 dark:text-zinc-100" : "text-zinc-500 dark:text-zinc-400"}`}
+                    className={`h-5 w-5 shrink-0 ${isActive ? "text-zinc-900 dark:text-zinc-100" : "text-zinc-500 dark:text-zinc-400"}`}
                   />
-                  <span className="font-medium text-sm">{item.name}</span>
+                  <span suppressHydrationWarning className={`font-medium text-sm whitespace-nowrap ${enableTransition ? "transition-all duration-300" : ""} ${isCollapsed ? "opacity-0 w-0 overflow-hidden ml-0" : "opacity-100 w-auto ml-3"}`}>
+                    {item.name}
+                  </span>
                 </Link>
               );
             })}

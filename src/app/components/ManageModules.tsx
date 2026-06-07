@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useSelector } from "react-redux";
 import type { RootState } from "../reduxToolkit/store";
+import toast from 'react-hot-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function ManageModules() {
   const queryClient = useQueryClient();
@@ -41,10 +43,10 @@ export default function ManageModules() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["modules"] });
       resetForm();
-      alert("Module saved successfully!");
+      toast.success("Module saved successfully!");
     },
     onError: (err: any) => {
-      alert(err.response?.data?.error || "Failed to save module.");
+      toast.error(err.response?.data?.error || "Failed to save module.");
     },
   });
 
@@ -55,7 +57,7 @@ export default function ManageModules() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["modules"] });
-      alert("Module deleted.");
+      toast("Module deleted.");
     },
   });
 
@@ -93,7 +95,7 @@ export default function ManageModules() {
 
   const handleSave = () => {
     if (!name || fields.length === 0) {
-      alert("Name and at least one form field are required.");
+      toast.error("Name and at least one form field are required.");
       return;
     }
     saveModuleMutation.mutate({ name, description, icon, color, fields });
@@ -140,18 +142,19 @@ export default function ManageModules() {
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Theme Color</label>
-              <select
-                value={color}
-                onChange={(e) => setColor(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg bg-zinc-50/50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="blue">Blue</option>
-                <option value="emerald">Emerald</option>
-                <option value="violet">Violet</option>
-                <option value="amber">Amber</option>
-                <option value="rose">Rose</option>
-                <option value="sky">Sky</option>
-              </select>
+              <Select value={color} onValueChange={setColor}>
+                <SelectTrigger className="w-full px-3 py-2 border rounded-lg bg-zinc-50/50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 h-auto min-h-10">
+                  <SelectValue placeholder="Select Color" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="blue">Blue</SelectItem>
+                  <SelectItem value="emerald">Emerald</SelectItem>
+                  <SelectItem value="violet">Violet</SelectItem>
+                  <SelectItem value="amber">Amber</SelectItem>
+                  <SelectItem value="rose">Rose</SelectItem>
+                  <SelectItem value="sky">Sky</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -189,15 +192,16 @@ export default function ManageModules() {
                         placeholder="Field Label (e.g. Deal Amount)"
                         className="h-8 text-xs"
                       />
-                      <select
-                        value={field.type}
-                        onChange={(e) => updateField(idx, "type", e.target.value)}
-                        className="w-full h-8 px-2 border rounded text-xs bg-white"
-                      >
-                        <option value="text">Text Input</option>
-                        <option value="number">Number Input</option>
-                        <option value="select">Dropdown Select</option>
-                      </select>
+                      <Select value={field.type} onValueChange={(val) => updateField(idx, "type", val)}>
+                        <SelectTrigger className="w-full h-8 px-2 border rounded text-xs bg-white">
+                          <SelectValue placeholder="Select Field Type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="text">Text Input</SelectItem>
+                          <SelectItem value="number">Number Input</SelectItem>
+                          <SelectItem value="select">Dropdown Select</SelectItem>
+                        </SelectContent>
+                      </Select>
                       
                       {field.type === "select" && (
                         <Input

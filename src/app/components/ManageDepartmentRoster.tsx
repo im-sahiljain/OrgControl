@@ -4,6 +4,8 @@ import axios from "axios";
 import { User, UserCheck, Plus, Trash2, ChevronRight, Settings2, X } from "lucide-react";
 import { useSelector } from "react-redux";
 import type { RootState } from "../reduxToolkit/store";
+import toast from 'react-hot-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface ManageDepartmentRosterProps {
   departmentId: string;
@@ -52,11 +54,11 @@ export default function ManageDepartmentRoster({ departmentId, onClose }: Manage
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["departments"] });
-      alert("Roster configuration saved successfully.");
+      toast.success("Roster configuration saved successfully.");
       onClose();
     },
     onError: (err: any) => {
-      alert(err.response?.data?.error || "Failed to save configuration.");
+      toast.error(err.response?.data?.error || "Failed to save configuration.");
     },
   });
 
@@ -158,18 +160,18 @@ export default function ManageDepartmentRoster({ departmentId, onClose }: Manage
                     <div className="flex items-center justify-between gap-4">
                       <div className="flex-1 flex items-center gap-2">
                         <span className="text-xs font-bold text-zinc-500">Manager:</span>
-                        <select
-                          value={mgrRow.managerId}
-                          onChange={(e) => handleUpdateManagerId(idx, e.target.value)}
-                          className="flex-1 px-2.5 py-1.5 border border-zinc-250 dark:border-zinc-750 rounded-lg text-xs bg-white focus:outline-none"
-                        >
-                          <option value="">-- Choose Manager --</option>
-                          {employees?.map((emp: any) => (
-                            <option key={emp._id || emp.id} value={emp._id || emp.id}>
-                              {emp.empName} ({emp.empPosition})
-                            </option>
-                          ))}
-                        </select>
+                        <Select value={mgrRow.managerId} onValueChange={(val) => handleUpdateManagerId(idx, val)}>
+                          <SelectTrigger className="flex-1 px-2.5 py-1.5 border border-zinc-250 dark:border-zinc-750 rounded-lg text-xs bg-white focus:outline-none h-auto min-h-8">
+                            <SelectValue placeholder="-- Choose Manager --" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {employees?.map((emp: any) => (
+                              <SelectItem key={emp._id || emp.id} value={emp._id || emp.id}>
+                                {emp.empName} ({emp.empPosition})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                       <button
                         onClick={() => handleDeleteManagerRow(idx)}

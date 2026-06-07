@@ -15,6 +15,8 @@ export interface ICandidate extends Document {
   pros: string[];
   cons: string[];
   interviewQuestions: { question: string; focusArea: string }[];
+  resumeText?: string;
+  resumeEmbedding?: number[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -44,6 +46,8 @@ const CandidateSchema: Schema = new Schema<ICandidate>(
         focusArea: { type: String, required: true },
       },
     ],
+    resumeText: { type: String, default: "" },
+    resumeEmbedding: { type: [Number], default: [] },
   },
   {
     timestamps: true,

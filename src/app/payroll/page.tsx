@@ -5,6 +5,7 @@ import { useSelector } from "react-redux";
 import { Coins, Download, ShieldCheck, Loader2, Play, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { RootState } from "../reduxToolkit/store";
+import toast from 'react-hot-toast';
 
 export default function PayrollPage() {
   const user = useSelector((state: RootState) => state.employeeUI.user);
@@ -25,7 +26,7 @@ export default function PayrollPage() {
     setTimeout(() => {
       setProcessing(false);
       setProcessed(true);
-      alert("Payroll ledger calculation executed successfully in INR for all active employees.");
+      toast.success("Payroll ledger calculation executed successfully in INR for all active employees.");
     }, 2000);
   };
 
@@ -222,7 +223,7 @@ export default function PayrollPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => alert(`Initiated payslip download in INR for ${slip.month}`)}
+                        onClick={() => toast(`Initiated payslip download in INR for ${slip.month}`)}
                         className="inline-flex items-center gap-1 text-xs"
                       >
                         <Download className="h-3.5 w-3.5" />
