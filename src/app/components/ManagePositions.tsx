@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useSelector } from "react-redux";
 import type { RootState } from "../reduxToolkit/store";
+import toast from 'react-hot-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function ManagePositions() {
   const queryClient = useQueryClient();
@@ -47,7 +49,7 @@ export default function ManagePositions() {
       setDepartment("Unassigned");
     },
     onError: (err: any) => {
-      alert(err.response?.data?.error || "Failed to add position.");
+      toast.error(err.response?.data?.error || "Failed to add position.");
     },
   });
 
@@ -63,7 +65,7 @@ export default function ManagePositions() {
 
   const handleAddPosition = () => {
     if (!title.trim()) {
-      alert("Position title is required.");
+      toast.error("Position title is required.");
       return;
     }
     addPositionMutation.mutate({ title, description, department });
@@ -106,18 +108,19 @@ export default function ManagePositions() {
 
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Primary Department</label>
-            <select
-              value={department}
-              onChange={(e) => setDepartment(e.target.value)}
-              className="w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-zinc-800 dark:text-zinc-100"
-            >
-              <option value="Unassigned">-- Unassigned (Global Role) --</option>
-              {departments?.map((d: any) => (
-                <option key={d._id || d.id} value={d.name}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
+            <Select value={department} onValueChange={setDepartment}>
+              <SelectTrigger className="w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-zinc-800 dark:text-zinc-100 h-auto min-h-10">
+                <SelectValue placeholder="-- Unassigned (Global Role) --" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Unassigned">-- Unassigned (Global Role) --</SelectItem>
+                {departments?.map((d: any) => (
+                  <SelectItem key={d._id || d.id} value={d.name}>
+                    {d.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <p className="text-xxs text-zinc-400 mt-1 flex gap-1 items-start">
               <ShieldAlert className="h-3 w-3 shrink-0" />
               If unassigned, the position can be freely used by any department.

@@ -4,7 +4,13 @@ import React from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { usePathname, useRouter } from "next/navigation";
 import type { RootState } from "../reduxToolkit/store";
-import { ShieldAlert, LogOut, ArrowRight, UserCheck, Loader2 } from "lucide-react";
+import {
+  ShieldAlert,
+  LogOut,
+  ArrowRight,
+  UserCheck,
+  Loader2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { setAuthSession } from "../reduxToolkit/slice";
 
@@ -12,19 +18,29 @@ export function RouteGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const dispatch = useDispatch();
-  const isAuthenticated = useSelector((state: RootState) => state.employeeUI.isAuthenticated);
+  const isAuthenticated = useSelector(
+    (state: RootState) => state.employeeUI.isAuthenticated,
+  );
   const user = useSelector((state: RootState) => state.employeeUI.user);
 
   const [isRestoring, setIsRestoring] = React.useState(true);
 
-  const publicRoutes = ["/", "/register", "/auth/org", "/auth/admin", "/pricing"];
+  const publicRoutes = [
+    "/",
+    "/register",
+    "/auth/org",
+    "/auth/admin",
+    "/pricing",
+    "/dashboard/profile",
+  ];
   const segments = pathname.split("/").filter(Boolean);
   const isCompanyJobs = segments.length === 2 && segments[1] === "jobs";
-  const isJobApplication = segments.length === 3 && segments[2] === "application";
+  const isJobApplication =
+    segments.length === 3 && segments[2] === "application";
 
-  const isPublicRoute = 
-    publicRoutes.includes(pathname) || 
-    pathname === "/jobs" || 
+  const isPublicRoute =
+    publicRoutes.includes(pathname) ||
+    pathname === "/jobs" ||
     pathname.startsWith("/jobs/") ||
     isCompanyJobs ||
     isJobApplication;
@@ -48,24 +64,80 @@ export function RouteGate({ children }: { children: React.ReactNode }) {
   }, [dispatch]);
 
   // 1. If not authenticated and not on a public route, force login screen inside useEffect
+  // 1. Route access control logic: redirect unauthenticated users to / and authenticated users to /dashboard if accessing outside whitelist
   React.useEffect(() => {
-    if (!isRestoring && !isAuthenticated && !isPublicRoute) {
-      router.push("/");
+    if (!isRestoring) {
+      if (!isAuthenticated) {
+        if (!isPublicRoute) {
+          router.push("/");
+        }
+      } else {
+        const allowedRoutes = [
+          "/dashboard",
+          "/features/hr_recruitment",
+          "/register",
+          "/auth/org",
+          "/auth/admin",
+          "/profile",
+          "/dashboard/profile",
+        ];
+        const isAllowed =
+          allowedRoutes.includes(pathname) ||
+          isCompanyJobs ||
+          isJobApplication ||
+          pathname === "/jobs" ||
+          pathname.startsWith("/jobs/");
+
+        if (!isAllowed) {
+          router.push("/dashboard");
+        }
+      }
     }
-  }, [isRestoring, isAuthenticated, isPublicRoute, router]);
+  }, [
+    isRestoring,
+    isAuthenticated,
+    isPublicRoute,
+    pathname,
+    router,
+    isCompanyJobs,
+    isJobApplication,
+  ]);
 
   if (isRestoring && !isPublicRoute) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-zinc-950">
         <div className="flex flex-col items-center gap-2">
           <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-          <p className="text-sm text-zinc-550 dark:text-zinc-400">Restoring session...</p>
+          <p className="text-sm text-zinc-550 dark:text-zinc-400">
+            Restoring session...
+          </p>
         </div>
       </div>
     );
   }
 
   if (!isAuthenticated && !isPublicRoute) {
+    return null;
+  }
+
+  // Render guard to prevent flash of restricted content while client redirect is in progress
+  const allowedRoutes = [
+    "/dashboard",
+    "/features/hr_recruitment",
+    "/register",
+    "/auth/org",
+    "/auth/admin",
+    "/profile",
+    "/dashboard/profile",
+  ];
+  const isAllowedForAuth =
+    allowedRoutes.includes(pathname) ||
+    isCompanyJobs ||
+    isJobApplication ||
+    pathname === "/jobs" ||
+    pathname.startsWith("/jobs/");
+
+  if (isAuthenticated && !isAllowedForAuth) {
     return null;
   }
 
@@ -87,7 +159,8 @@ export function RouteGate({ children }: { children: React.ReactNode }) {
           403 - SaaS Maker Access Restricted
         </h2>
         <p className="text-sm text-zinc-500 max-w-md mb-6 leading-relaxed">
-          The requested platform administration panel is reserved strictly for Platform Owners (`platform_admin`).
+          The requested platform administration panel is reserved strictly for
+          Platform Owners (`platform_admin`).
         </p>
         <div className="flex gap-3 justify-center">
           <Button
@@ -103,7 +176,10 @@ export function RouteGate({ children }: { children: React.ReactNode }) {
 
   // 3. Protect Admin-only Organization views from general Employees
   const adminRoutes = ["/employees", "/payroll"];
-  if (adminRoutes.some((route) => pathname.startsWith(route)) && role === "employee") {
+  if (
+    adminRoutes.some((route) => pathname.startsWith(route)) &&
+    role === "employee"
+  ) {
     return (
       <div className="flex-1 min-h-[70vh] flex flex-col items-center justify-center text-center p-8 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm">
         <div className="h-16 w-16 bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 rounded-full flex items-center justify-center mb-6">
@@ -113,7 +189,8 @@ export function RouteGate({ children }: { children: React.ReactNode }) {
           Administrative Credentials Required
         </h2>
         <p className="text-sm text-zinc-500 max-w-sm mb-6 leading-relaxed">
-          Workforce directories, employee record modifiers, and payroll runs are locked for standard Employee profiles.
+          Workforce directories, employee record modifiers, and payroll runs are
+          locked for standard Employee profiles.
         </p>
         <div className="flex gap-3 justify-center">
           <Button

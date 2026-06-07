@@ -1,4 +1,4 @@
-# Org Control 🏢
+# AI-Powered ATS & Recruitment Workspace 🏢
 
 ![Next.js](https://img.shields.io/badge/Next.js-14-black)
 ![React](https://img.shields.io/badge/React-18-blue)
@@ -6,27 +6,26 @@
 ![TanStack Query](https://img.shields.io/badge/TanStack_Query-red)
 ![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-green)
 ![TailwindCSS](https://img.shields.io/badge/Tailwind-CSS-38B2AC)
+![Gemini AI](https://img.shields.io/badge/Google-Gemini_AI-orange)
 
-**Org Control** is a scalable, multi-tenant SaaS Employee and Organization Management platform built to showcase advanced modern frontend architecture, complex state management, and secure AI integrations.
+An intelligent Applicant Tracking System (ATS) and Recruitment Workspace built to eliminate manual resume screening. By combining Generative AI with advanced Vector Search, this platform reads, understands, and mathematically matches candidates to job requirements.
 
 ## ✨ Key Features
 
-- **Multi-Tenant Architecture:** Securely manages data across multiple organizations using MongoDB document isolation and strict multi-tenancy models.
-- **Dynamic Department Dashboards:** Custom-rendered, interactive workspaces tailored specifically for distinct corporate divisions (Engineering, Sales, HR, Finance) and hierarchical levels.
-- **Hybrid State Management:** Strategically decouples asynchronous server-state fetching via **TanStack Query** from complex, synchronous client-side UI interactions managed by **Redux Toolkit**.
-- **Role-Based Access Control (RBAC):** Stringent permissions mapped across the entire stack, restricting specific modules, routes, and data based on active session roles (`org_admin`, `platform_admin`, `employee`).
-- **Secure Streaming AI Copilot:** Features an integrated AI assistant that dynamically intercepts and contextually filters user queries based on active Redux session states—preventing unauthorized access to aggregate payroll or sensitive corporate metrics.
-- **End-to-End Type Safety:** Fully typed across the stack using **TypeScript** and **Zod** schema validation for robust, crash-resistant API routes and client forms.
+- **Automated Resume Screening (Gemini Flash):** Uploaded resumes are parsed to extract structured insights (skills, pros, cons) and automatically graded with a baseline Match Score against the job description.
+- **Semantic RAG Candidate Search:** Utilizes **Retrieval-Augmented Generation (RAG)**. Resumes are converted into 3,072-dimensional vectors using `gemini-embedding-2`. Recruiters can perform semantic queries (e.g., "state management expert"), and MongoDB Vector Search instantly retrieves the closest matches—even without exact keyword overlap.
+- **Interactive Kanban Pipeline:** A drag-and-drop dashboard to seamlessly move candidates through stages (Applied, Screened, Interviewing, Offered, Rejected).
+- **High-Performance Frontend Architecture:** Leverages **React Query** for intelligent client-side caching (instant RAG searches when switching jobs) and **Redux Toolkit** for complex synchronous UI state, preventing unnecessary re-renders.
+- **Sequential Batch Processing:** Features a background asynchronous queueing system for AI auto-screening, avoiding UI freezing and protecting against AI API rate limits.
 
 ## 🚀 Tech Stack
 
 - **Framework:** Next.js (App Router)
 - **Language:** TypeScript
 - **State Management:** Redux Toolkit (Client State) + TanStack Query (Server State)
-- **Database:** MongoDB Atlas (Mongoose)
-- **Validation:** Zod
-- **Styling & UI:** Tailwind CSS, Shadcn UI, Framer Motion
-- **AI Integration:** Vercel AI SDK
+- **Database:** MongoDB Atlas (Mongoose + HNSW Vector Indexing)
+- **AI Integration:** Google GenAI SDK (Gemini Flash, Gemini Embeddings)
+- **Styling & UI:** Tailwind CSS, Shadcn UI
 
 ## 💻 Getting Started
 
@@ -38,7 +37,7 @@ cd OrgControl
 npm install
 ```
 
-Ensure your environment variables are configured in `.env` (refer to `.env.sample`). 
+Ensure your environment variables are configured in `.env` (refer to `.env.sample`). Crucially, you must provide your MongoDB Atlas URI and a Google Gemini API Key.
 
 Run the development server:
 
@@ -47,7 +46,3 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-## 🔐 Authentication Presets
-
-For testing purposes, the login page features multiple one-click authentication presets to immediately jump into different roles (e.g., HR Admin, Standard Employee, Platform SaaS Owner). You can also use the Developer Switcher in the top navigation bar to quickly swap session roles on the fly.

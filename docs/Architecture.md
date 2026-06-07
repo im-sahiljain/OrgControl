@@ -201,6 +201,10 @@ Second, the HR user can click a button to screen these candidates. When they do,
 
 Third, to make these resumes searchable by meaning rather than just exact keywords, we turn that clean text into a long list of numbers—called a vector embedding—that represents the resume's actual meaning. We save these numbers in our database.
 
+An important design decision here is using two different AI models for two different purposes:
+- **Gemini Flash (Generative AI):** Acts like a human recruiter. It reads the raw PDF, extracts structured insights (skills, summary, pros, cons), and gives an absolute, baseline `matchScore` against the original job post. This is perfect for initial filtering and rendering clean UI dashboards.
+- **Gemini Embeddings (Vector AI):** Does not reason or read; it strictly maps the cleaned text into a 3,072-dimensional mathematical space. This creates a lightning-fast search index for dynamic, ad-hoc RAG searches (returning a relative `matchPercentage`), allowing recruiters to instantly query specific concepts later without needing to re-process the PDFs.
+
 Finally, when HR wants to search for candidates, they can type something like 'caching engineer' or just click a button to match candidates against the job posting itself. Here is the complete step-by-step process of how this search works:
 
    * **Step 1: The HR Action (Frontend)**: 
@@ -215,3 +219,28 @@ Finally, when HR wants to search for candidates, they can type something like 'c
      The React frontend receives the sorted candidates array and maps over it, rendering candidate cards ordered from the highest similarity match percentage to the lowest.
 
 To make sure the system is reliable, we also built a fallback. If the cloud database search index is not ready or fails for any reason, the system automatically retrieves the resumes and does the similarity calculations in-memory, ensuring the HR user always gets search results without any errors."
+
+### Key Concepts (Interviewer Q&A Guide)
+
+If asked to explain the core AI concepts driving the search engine, here is the step-by-step breakdown:
+
+#### 1. What is RAG?
+**RAG (Retrieval-Augmented Generation)** is a technique used to give an AI model access to your private, external data. Instead of relying purely on what an AI was trained on, we first "Retrieve" the most relevant private documents (like our resumes) based on the user's query, and then "Augment" the AI's generation by feeding those specific documents into its context window. In our recruitment tool, RAG allows HR to instantly retrieve the best resumes based on the semantic meaning of their search.
+
+#### 2. What is a Vector Database?
+A **Vector Database** (like our configured MongoDB Atlas Vector Search) is a specialized database built to store and quickly query multi-dimensional arrays of numbers, known as vectors. Unlike a traditional SQL database that searches for exact keyword matches (e.g., `WHERE skill = 'React'`), a vector database organizes data spatially. It places conceptually similar items close together in a mathematical space, allowing it to search by meaning and context rather than just exact text.
+
+#### 3. What is Vector Search and how does it work from an array of numbers?
+**Vector Search** is the process of finding the "closest" data points within that Vector Database. 
+When we map data into an array of numbers, we are plotting points on a massive, multi-dimensional graph. Vector search uses mathematical formulas to calculate the distance or angle between these points. If the array representing a resume points in the exact same direction as the array representing a search query, it means they share identical semantic meaning. The database simply measures these angles and returns the points that are mathematically nearest to the query.
+
+#### 4. How is text converted into an array of numbers?
+Text is converted into an array of numbers using an **Embedding Model** (in our case, `gemini-embedding-2`). 
+The model reads the text and passes it through layers of a neural network. As it processes the text, it evaluates thousands of different semantic concepts (e.g., is this related to frontend? backend? management? junior level?). It outputs a fixed-length array (e.g., 3,072 floating-point numbers), where each number represents the text's "score" along a specific conceptual dimension. This array is called an **Embedding**.
+
+#### 5. How does it match the query with the response?
+When the user types a query, that sentence is first sent to the embedding model to be converted into its own array of numbers (the Query Vector). 
+The database then compares this Query Vector against all the Resume Vectors it has stored. It typically uses **Cosine Similarity**, which calculates the cosine of the angle between the two vectors. 
+- A cosine score of `1` means the vectors point in the exact same direction (perfect semantic match).
+- A score closer to `0` means they are unrelated.
+The database sorts all resumes by this mathematical score, converts it to a percentage (e.g., `85%`), and returns the top results. This is how a query for "state management" successfully matches a resume that only says "Redux" even if the exact words don't match!

@@ -4,6 +4,7 @@ import "./globals.css";
 import { UnifiedProviders } from "./providers";
 import { LayoutWrapper } from "./components/LayoutWrapper";
 import { RouteGate } from "./components/routeGate";
+import { Toaster } from "react-hot-toast";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,6 +37,7 @@ export default function RootLayout({
             <RouteGate>{children}</RouteGate>
           </LayoutWrapper>
         </UnifiedProviders>
+        <Toaster position="bottom-right" />
       </body>
     </html>
   );

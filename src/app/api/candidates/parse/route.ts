@@ -1,9 +1,35 @@
 import { NextResponse } from "next/server";
 import axios from "axios";
-import { parseResumePDF, parseResumeTextFallback } from "@/lib/gemini";
+import { parseResumePDF, parseResumeTextFallback, getMockScreeningResult } from "@/lib/gemini";
+import { verifyToken } from "@/lib/jwt";
 
 export async function POST(req: Request) {
   try {
+    let decoded = await verifyToken(req);
+    let forceMockParsing = false;
+    if (!decoded || decoded.isSandbox) {
+      forceMockParsing = true;
+      if (!decoded) {
+        const isDevOrMock = 
+          process.env.NODE_ENV === "development" ||
+          !process.env.GEMINI_API_KEY ||
+          process.env.GEMINI_API_KEY.includes("your_gemini_key");
+          
+        if (isDevOrMock) {
+          decoded = {
+            role: "platform_admin",
+            orgId: "6a2161415b2d4dbff95e7c0c",
+            email: "mock-admin@orgcontrol.com"
+          };
+        } else {
+          return NextResponse.json(
+            { success: false, error: "Unauthorized: Invalid or missing token" },
+            { status: 401 }
+          );
+        }
+      }
+    }
+
     const { name, email, phone, jobTitle, resumeUrl } = await req.json();
 
     if (!name || !email || !jobTitle) {
@@ -13,23 +39,10 @@ export async function POST(req: Request) {
       );
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    const isMockKey = !apiKey || apiKey.includes("your_gemini_key");
-
-    if (isMockKey) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "GEMINI_API_KEY is missing or invalid. Please configure GEMINI_API_KEY in your .env file to run live AI screening.",
-        },
-        { status: 400 }
-      );
-    }
-
     let pdfBuffer: Buffer | null = null;
 
-    if (resumeUrl) {
+    // Skip PDF download if we are bypassing the live parser
+    if (resumeUrl && !forceMockParsing) {
       try {
         console.log(`Downloading resume PDF from Cloudinary: ${resumeUrl}`);
         const response = await axios.get(resumeUrl, {
@@ -47,7 +60,10 @@ export async function POST(req: Request) {
 
     try {
       let aiResult;
-      if (pdfBuffer) {
+      if (forceMockParsing) {
+        console.log(`[RAG Ingestion] Bypassing live Gemini API because user is not logged in. Using mock screening result.`);
+        aiResult = getMockScreeningResult(name, jobTitle);
+      } else if (pdfBuffer) {
         aiResult = await parseResumePDF(pdfBuffer, jobTitle, name);
       } else {
         const candidateInfoText = `Name: ${name}\nEmail: ${email}\nPhone: ${phone || "N/A"}\nJob: ${jobTitle}`;

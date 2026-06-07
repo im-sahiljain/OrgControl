@@ -2,20 +2,56 @@
 
 import React, { useState } from "react";
 import { useSelector } from "react-redux";
-import { TrendingUp, Plus, Award, Star, StarOff, Sparkles, UserCheck } from "lucide-react";
+import { TrendingUp, Plus, Award, Star, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { RootState } from "../reduxToolkit/store";
+import toast from "react-hot-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function PerformancePage() {
   const user = useSelector((state: RootState) => state.employeeUI.user);
   const userRole = user?.role || "employee";
 
   const [goals, setGoals] = useState<any[]>([
-    { id: 1, title: "Optimize DB Connection Limits", desc: "Reuse cached connections for cold-start performance", progress: 85, weight: "High", owner: "Aarav Sharma" },
-    { id: 2, title: "Directory Search Auto-indexing", desc: "Enable full-text autocomplete search indexes", progress: 60, weight: "Medium", owner: "Aarav Sharma" },
-    { id: 3, title: "Configure Cloudinary API", desc: "Integrate base64 image hosting upload signature routes", progress: 100, weight: "High", owner: "Aarav Sharma" },
-    { id: 4, title: "Upgrade RAG Vectors in Copilot", desc: "Create Atlas Semantic indexing layers", progress: 40, weight: "High", owner: "Ananya Patel" },
+    {
+      id: 1,
+      title: "Optimize DB Connection Limits",
+      desc: "Reuse cached connections for cold-start performance",
+      progress: 85,
+      weight: "High",
+      owner: "Aarav Sharma",
+    },
+    {
+      id: 2,
+      title: "Directory Search Auto-indexing",
+      desc: "Enable full-text autocomplete search indexes",
+      progress: 60,
+      weight: "Medium",
+      owner: "Aarav Sharma",
+    },
+    {
+      id: 3,
+      title: "Configure Cloudinary API",
+      desc: "Integrate base64 image hosting upload signature routes",
+      progress: 100,
+      weight: "High",
+      owner: "Aarav Sharma",
+    },
+    {
+      id: 4,
+      title: "Upgrade RAG Vectors in Copilot",
+      desc: "Create Atlas Semantic indexing layers",
+      progress: 40,
+      weight: "High",
+      owner: "Ananya Patel",
+    },
   ]);
 
   const [newGoalTitle, setNewGoalTitle] = useState<string>("");
@@ -46,7 +82,8 @@ export default function PerformancePage() {
             Performance & OKR Supervisor
           </h1>
           <p className="text-sm text-zinc-500">
-            Establish team-wide key results, evaluate peer feedback scores, and calibrate final reviews.
+            Establish team-wide key results, evaluate peer feedback scores, and
+            calibrate final reviews.
           </p>
         </div>
 
@@ -60,11 +97,18 @@ export default function PerformancePage() {
               </h3>
               <div className="space-y-5">
                 {goals.map((g) => (
-                  <div key={g.id} className="p-4 bg-zinc-50 dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800 rounded-xl space-y-3">
+                  <div
+                    key={g.id}
+                    className="p-4 bg-zinc-50 dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800 rounded-xl space-y-3"
+                  >
                     <div className="flex items-start justify-between">
                       <div>
-                        <h4 className="font-semibold text-zinc-950 dark:text-zinc-50">{g.title}</h4>
-                        <p className="text-xs text-zinc-400 mt-0.5">Assigned to: {g.owner} | {g.desc}</p>
+                        <h4 className="font-semibold text-zinc-950 dark:text-zinc-50">
+                          {g.title}
+                        </h4>
+                        <p className="text-xs text-zinc-400 mt-0.5">
+                          Assigned to: {g.owner} | {g.desc}
+                        </p>
                       </div>
                       <span className="text-xxs px-2 py-0.5 bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-full font-bold">
                         {g.weight} Weight
@@ -102,16 +146,20 @@ export default function PerformancePage() {
                   value={newGoalTitle}
                   onChange={(e) => setNewGoalTitle(e.target.value)}
                 />
-                <select
-                  value={newGoalWeight}
-                  onChange={(e) => setNewGoalWeight(e.target.value)}
-                  className="w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                <Select value={newGoalWeight} onValueChange={setNewGoalWeight}>
+                  <SelectTrigger className="w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 h-auto min-h-10">
+                    <SelectValue placeholder="Select Priority" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="High">High Priority</SelectItem>
+                    <SelectItem value="Medium">Medium Priority</SelectItem>
+                    <SelectItem value="Low">Low Priority</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  onClick={handleAddGoal}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                 >
-                  <option value="High">High Priority</option>
-                  <option value="Medium">Medium Priority</option>
-                  <option value="Low">Low Priority</option>
-                </select>
-                <Button onClick={handleAddGoal} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
                   Add Team Goal
                 </Button>
               </div>
@@ -124,7 +172,8 @@ export default function PerformancePage() {
                 Team Calibration Score
               </h3>
               <p className="text-xs text-zinc-550">
-                Average appraisal calibration score for the current review period.
+                Average appraisal calibration score for the current review
+                period.
               </p>
               <div className="flex items-center gap-2">
                 <div className="flex text-amber-400">
@@ -155,7 +204,8 @@ export default function PerformancePage() {
           My Objectives & Key Results (OKRs)
         </h1>
         <p className="text-sm text-zinc-500">
-          Review your personal goals, update completion percentages, and write self-assessment sheets.
+          Review your personal goals, update completion percentages, and write
+          self-assessment sheets.
         </p>
       </div>
 
@@ -168,10 +218,15 @@ export default function PerformancePage() {
           </h3>
           <div className="space-y-5">
             {personalGoals.map((g) => (
-              <div key={g.id} className="p-4 bg-zinc-50 dark:bg-zinc-955 border border-zinc-100 dark:border-zinc-850 rounded-xl space-y-3">
+              <div
+                key={g.id}
+                className="p-4 bg-zinc-50 dark:bg-zinc-955 border border-zinc-100 dark:border-zinc-850 rounded-xl space-y-3"
+              >
                 <div className="flex items-start justify-between">
                   <div>
-                    <h4 className="font-semibold text-zinc-950 dark:text-zinc-50">{g.title}</h4>
+                    <h4 className="font-semibold text-zinc-950 dark:text-zinc-50">
+                      {g.title}
+                    </h4>
                     <p className="text-xs text-zinc-400 mt-0.5">{g.desc}</p>
                   </div>
                   <span className="text-xxs px-2.5 py-0.5 bg-blue-50 text-blue-600 dark:bg-blue-900/20 rounded-full font-bold">
@@ -191,7 +246,9 @@ export default function PerformancePage() {
                     onChange={(e) => {
                       const val = Number(e.target.value);
                       setGoals((prev) =>
-                        prev.map((item) => (item.id === g.id ? { ...item, progress: val } : item))
+                        prev.map((item) =>
+                          item.id === g.id ? { ...item, progress: val } : item,
+                        ),
                       );
                     }}
                     className="w-full accent-blue-600 bg-zinc-200 rounded-lg cursor-pointer h-1.5"
@@ -210,7 +267,8 @@ export default function PerformancePage() {
               Cycle Self-Assessment
             </h3>
             <p className="text-xs text-zinc-500">
-              Submit your H1 performance accomplishments directly to your reporting manager.
+              Submit your H1 performance accomplishments directly to your
+              reporting manager.
             </p>
             <textarea
               placeholder="List key highlights or speed achievements..."
@@ -218,7 +276,11 @@ export default function PerformancePage() {
               className="w-full rounded-lg border border-zinc-200 dark:border-zinc-850 bg-white dark:bg-zinc-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-zinc-800 dark:text-zinc-100"
             />
             <Button
-              onClick={() => alert("Self-assessment submitted successfully to HR Calibration Roster.")}
+              onClick={() =>
+                toast.success(
+                  "Self-assessment submitted successfully to HR Calibration Roster.",
+                )
+              }
               className="w-full bg-blue-600 hover:bg-blue-700 text-white"
             >
               Submit Appraisal

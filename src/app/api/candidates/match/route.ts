@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import dbConnect from "@/lib/dbConnect";
 import Candidate from "@/models/Candidate";
 import JobPosting from "@/models/JobPosting";
-import { generateEmbedding } from "@/lib/gemini";
+import { generateEmbedding, getDeterministicMockEmbedding } from "@/lib/gemini";
+import { verifyToken } from "@/lib/jwt";
 
 // Helper functions for Cosine Similarity calculation
 function dotProduct(vecA: number[], vecB: number[]): number {
@@ -32,13 +34,39 @@ function cosineSimilarity(vecA: number[], vecB: number[]): number {
 
 export async function POST(req: Request) {
   try {
+    let decoded = await verifyToken(req);
+    console.log("decoded", decoded);
+    let forceMockEmbedding = false;
+    if (!decoded || decoded.isSandbox) {
+      forceMockEmbedding = true;
+      if (!decoded) {
+        const isDevOrMock = 
+          process.env.NODE_ENV === "development" ||
+          !process.env.GEMINI_API_KEY ||
+          process.env.GEMINI_API_KEY.includes("your_gemini_key");
+          
+        if (isDevOrMock) {
+          decoded = {
+            role: "platform_admin",
+            orgId: "6a2161415b2d4dbff95e7c0c",
+            email: "mock-admin@orgcontrol.com",
+          };
+        } else {
+          return NextResponse.json(
+            { success: false, error: "Unauthorized: Invalid or missing token" },
+            { status: 401 },
+          );
+        }
+      }
+    }
+
     await dbConnect();
     const { jobId, searchQuery, limit = 15 } = await req.json();
 
     if (!jobId) {
       return NextResponse.json(
         { success: false, error: "jobId is required for matching candidates" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -53,22 +81,32 @@ export async function POST(req: Request) {
       if (!job) {
         return NextResponse.json(
           { success: false, error: "Job posting not found" },
-          { status: 404 }
+          { status: 404 },
         );
       }
       queryText = `Job Title: ${job.title}\nJob Description: ${job.description}\nRequirements: ${(job.requirements || []).join(", ")}`;
-      console.log(`Performing RAG matching against Job Description for: "${job.title}"`);
+      console.log(
+        `Performing RAG matching against Job Description for: "${job.title}"`,
+      );
     }
 
     // Generate query embedding (768-dimensions)
-    const queryVector = await generateEmbedding(queryText);
+    let queryVector: number[];
+    if (forceMockEmbedding) {
+      console.log(`[RAG Match] Bypassing live Gemini API because user is not logged in. Using deterministic mock embedding.`);
+      queryVector = getDeterministicMockEmbedding(queryText);
+    } else {
+      queryVector = await generateEmbedding(queryText);
+    }
 
     let candidates: any[] = [];
     let searchMethod = "vectorSearch";
 
     // 2. Perform search
     try {
-      console.log(`[RAG Match] Running Atlas Vector Search for jobId: "${jobId}"`);
+      console.log(
+        `[RAG Match] Running Atlas Vector Search for jobId: "${jobId}"`,
+      );
       // Attempt Atlas Vector Search
       candidates = await Candidate.aggregate([
         {
@@ -77,8 +115,17 @@ export async function POST(req: Request) {
             path: "resumeEmbedding",
             queryVector: queryVector,
             numCandidates: 100,
-            limit: limit,
+            limit: 100,
           },
+        },
+        {
+          $match: {
+            orgId: new mongoose.Types.ObjectId(decoded.orgId),
+            jobId: new mongoose.Types.ObjectId(jobId),
+          },
+        },
+        {
+          $limit: limit,
         },
         {
           $project: {
@@ -97,7 +144,9 @@ export async function POST(req: Request) {
           },
         },
       ]);
-      console.log(`[RAG Match] Atlas Vector Search returned ${candidates.length} candidate(s).`);
+      console.log(
+        `[RAG Match] Atlas Vector Search returned ${candidates.length} candidate(s).`,
+      );
 
       // Fallback if the Atlas index hasn't been created yet and returns 0 results
       if (candidates.length === 0) {
@@ -106,7 +155,9 @@ export async function POST(req: Request) {
           resumeEmbedding: { $exists: true, $ne: [] },
         });
         if (countWithEmbeddings > 0) {
-          console.log(`[RAG Match] Atlas returned 0 results but ${countWithEmbeddings} candidates have embeddings. Forcing in-memory fallback.`);
+          console.log(
+            `[RAG Match] Atlas returned 0 results but ${countWithEmbeddings} candidates have embeddings. Forcing in-memory fallback.`,
+          );
           throw new Error("Atlas vector index is inactive or not configured.");
         }
       }
@@ -119,19 +170,23 @@ export async function POST(req: Request) {
     } catch (vectorSearchError: any) {
       console.warn(
         "MongoDB Atlas Vector Search index failed/unsupported. Falling back to in-memory cosine similarity.",
-        vectorSearchError.message
+        vectorSearchError.message,
       );
       searchMethod = "inMemoryFallback";
 
       // 3. Fallback: Load all candidate vectors for the jobId and calculate cosine similarity
-      console.log(`[RAG Match] Querying database candidates for jobId: "${jobId}"`);
+      console.log(
+        `[RAG Match] Querying database candidates for jobId: "${jobId}"`,
+      );
       const allCandidates = await Candidate.find({
         jobId,
         resumeEmbedding: { $exists: true, $ne: [] },
       }).select(
-        "name email phone resumeUrl stage isAiScreened matchScore skills summary createdAt resumeEmbedding"
+        "name email phone resumeUrl stage isAiScreened matchScore skills summary createdAt resumeEmbedding",
       );
-      console.log(`[RAG Match] Loaded ${allCandidates.length} candidates with valid embeddings.`);
+      console.log(
+        `[RAG Match] Loaded ${allCandidates.length} candidates with valid embeddings.`,
+      );
 
       const scoredCandidates = allCandidates.map((cand: any) => {
         const similarity = cosineSimilarity(queryVector, cand.resumeEmbedding);
@@ -171,7 +226,7 @@ export async function POST(req: Request) {
     console.error("POST /api/candidates/match Error:", error);
     return NextResponse.json(
       { success: false, error: error.message },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

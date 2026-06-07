@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { Loader2, Sparkles, FileText, CheckCircle2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import toast from 'react-hot-toast';
 
 interface UnscreenedResumesWidgetProps {
   orgId: string;
@@ -66,11 +67,11 @@ export default function UnscreenedResumesWidget({ orgId }: UnscreenedResumesWidg
       queryClient.invalidateQueries({ queryKey: ["unscreened-candidates"] });
       queryClient.invalidateQueries({ queryKey: ["recruitment-candidates"] });
       setScreeningId(null);
-      alert("AI Screening completed successfully! Candidate advanced to the pipeline.");
+      toast.success("AI Screening completed successfully! Candidate advanced to the pipeline.");
     },
     onError: (err: any) => {
       console.error(err);
-      alert(err.response?.data?.error || "Failed to parse candidate resume with AI.");
+      toast.error(err.response?.data?.error || "Failed to parse candidate resume with AI.");
       setScreeningId(null);
     }
   });

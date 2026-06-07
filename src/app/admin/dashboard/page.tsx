@@ -7,6 +7,7 @@ import axios from "axios";
 import { Cpu, ShieldCheck, CheckCircle2, AlertCircle, Play, Ban, Building2, User, Mail, Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import toast from 'react-hot-toast';
 
 export default function SaasMakerPage() {
   const { data, isLoading, error, refetch } = useQuery({
@@ -24,10 +25,10 @@ export default function SaasMakerPage() {
         orgId: id,
         status: nextStatus,
       });
-      alert(`Tenant status successfully changed to: ${nextStatus.toUpperCase()}`);
+      toast.success(`Tenant status successfully changed to: ${nextStatus.toUpperCase()}`);
       refetch();
     } catch (err: any) {
-      alert("Failed to update tenant status: " + (err.response?.data?.error || err.message));
+      toast.error("Failed to update tenant status: " + (err.response?.data?.error || err.message));
     }
   };
 

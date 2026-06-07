@@ -45,6 +45,17 @@ import {
 export default function Dashboard() {
   const user = useSelector((state: RootState) => state.employeeUI.user);
 
+  // Fetch organization details to get the company name dynamically
+  const { data: organization } = useQuery({
+    queryKey: ["organization", user?.orgId],
+    queryFn: async () => {
+      if (!user?.orgId || user.orgId === "platform_layer") return null;
+      const res = await axios.get(`/api/organizations/${user.orgId}`);
+      return res.data.data;
+    },
+    enabled: !!user?.orgId,
+  });
+
   // Fetch employees list
   // const { data: employees, isLoading: isEmployeesLoading } = useQuery({
   //   queryKey: ["employees"],
@@ -371,11 +382,12 @@ export default function Dashboard() {
         <div className="bg-linear-to-r from-blue-600 to-indigo-600 text-white rounded-2xl p-6 md:p-8 shadow-md relative overflow-hidden">
           <div className="max-w-3xl relative z-10">
             <h1 className="text-3xl font-extrabold tracking-tight mb-2">
-              Welcome to your Org Workspace
+              Welcome {organization?.name || "to your Org"}, to your Workspace
+              !!!
             </h1>
-            <p className="text-blue-100 text-sm">
-              Supervise multi-tenant directories, monitor leaves & clock logs,
-              process payroll systems, and configure layout configurators.
+            <p className="text-white text-base">
+              Publish open postings, monitor candidate flows, and evaluate
+              automated AI matching details.
             </p>
           </div>
         </div>

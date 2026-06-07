@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
+import toast from 'react-hot-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function DynamicModuleCard({ 
   moduleDef, 
@@ -55,7 +57,7 @@ export default function DynamicModuleCard({
       setFormData({});
     },
     onError: (error) => {
-      alert("Failed to submit entry.");
+      toast.error("Failed to submit entry.");
       console.error(error);
     }
   });
@@ -74,7 +76,7 @@ export default function DynamicModuleCard({
       queryClient.invalidateQueries({ queryKey: ["module-entries", moduleDef._id] });
     },
     onError: (error) => {
-      alert("Failed to approve entries.");
+      toast.error("Failed to approve entries.");
       console.error(error);
     }
   });
@@ -87,7 +89,7 @@ export default function DynamicModuleCard({
     // Validate required fields (just checking if they exist for now)
     const isValid = moduleDef.fields.every((f: any) => formData[f.name]);
     if (!isValid) {
-      alert("Please fill out all fields.");
+      toast.error("Please fill out all fields.");
       return;
     }
     submitMutation.mutate(formData);
@@ -159,17 +161,20 @@ export default function DynamicModuleCard({
                   />
                 )}
                 {field.type === "select" && (
-                  <select
-                    value={formData[field.name] || ""}
-                    onChange={(e) => handleInputChange(field.name, e.target.value)}
-                    className="w-full h-8 px-2.5 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs focus:outline-none bg-white dark:bg-zinc-900 font-medium"
+                  <Select 
+                    value={formData[field.name]} 
+                    onValueChange={(val) => handleInputChange(field.name, val)}
                     disabled={submitMutation.isPending}
                   >
-                    <option value="" disabled>Select {field.name}</option>
-                    {field.options?.map((opt: string, i: number) => (
-                      <option key={i} value={opt}>{opt}</option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="w-full h-8 px-2.5 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs focus:outline-none bg-white dark:bg-zinc-900 font-medium">
+                      <SelectValue placeholder={`Select ${field.name}`} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {field.options?.map((opt: string, i: number) => (
+                        <SelectItem key={i} value={opt}>{opt}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
               </div>
             ))}

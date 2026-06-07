@@ -83,6 +83,7 @@ export default function LoginPage() {
           : "border-zinc-200 dark:border-zinc-800 bg-zinc-50/40 dark:bg-zinc-950/10 text-zinc-650",
         department: emp.department || "Unassigned",
         position: emp.empPosition,
+        orgId: emp.orgId,
       });
     });
   }
@@ -99,21 +100,30 @@ export default function LoginPage() {
       color: "border-sky-200 dark:border-sky-900 bg-sky-50/40 dark:bg-sky-950/20 text-sky-600 dark:text-sky-400",
       department: "System Administration",
       position: "Platform Owner",
+      orgId: "platform_layer",
     });
   }
 
-  const handleLogin = (preset: any) => {
-    dispatch(
-      loginUser({
-        id: preset.id,
-        name: preset.name,
-        email: preset.email,
-        role: preset.role,
-        orgId: preset.role === "platform_admin" ? "platform_layer" : (orgData?._id || "org_default"),
-        department: preset.department,
-        position: preset.position,
-      }),
-    );
+  const handleLogin = async (preset: any) => {
+    const payload = {
+      id: preset.id,
+      name: preset.name,
+      email: preset.email,
+      role: preset.role,
+      orgId: preset.orgId || (orgData?._id || "org_default"),
+      department: preset.department,
+      position: preset.position,
+      isSandbox: true,
+    };
+
+    try {
+      // Issue a real JWT token for the sandbox mock user so backend APIs work
+      await axios.post("/api/auth/sandbox-login", payload);
+    } catch (e) {
+      console.error("Sandbox login failed:", e);
+    }
+
+    dispatch(loginUser(payload));
     if (preset.role === "platform_admin") {
       router.push("/admin/dashboard");
     } else {

@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import toast from 'react-hot-toast';
 
 export default function EmployeesPage() {
   const dispatch = useDispatch();
@@ -96,16 +97,16 @@ export default function EmployeesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["departments"] });
       setSelectedPredefinedDeptSlug("");
-      alert("New Department added successfully.");
+      toast.success("New Department added successfully.");
     },
     onError: (err: any) => {
-      alert(err.response?.data?.error || "Failed to create department.");
+      toast.error(err.response?.data?.error || "Failed to create department.");
     },
   });
 
   const handleAddDept = () => {
     if (!selectedPredefinedDeptSlug) {
-      alert("Please select a predefined department.");
+      toast.error("Please select a predefined department.");
       return;
     }
 

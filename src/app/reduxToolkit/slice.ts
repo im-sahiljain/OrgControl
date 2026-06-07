@@ -21,6 +21,7 @@ export interface UserSession {
   orgId: string;
   department?: string;
   position?: string;
+  isSandbox?: boolean;
 }
 
 export interface EmployeeUIState {

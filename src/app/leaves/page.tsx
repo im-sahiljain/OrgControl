@@ -6,6 +6,8 @@ import { CalendarRange, Plus, CheckCircle2, RefreshCcw, XCircle, ShieldCheck } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { RootState } from "../reduxToolkit/store";
+import toast from 'react-hot-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function LeavesPage() {
   const user = useSelector((state: RootState) => state.employeeUI.user);
@@ -26,7 +28,7 @@ export default function LeavesPage() {
 
   const handleApply = () => {
     if (!startDate || !endDate || !reason) {
-      alert("Please fill out all fields.");
+      toast.error("Please fill out all fields.");
       return;
     }
     const days = Math.round((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 3600 * 24)) + 1;
@@ -51,7 +53,7 @@ export default function LeavesPage() {
     setAllRequests((prev) =>
       prev.map((r) => (r.id === id ? { ...r, status: nextStatus } : r))
     );
-    alert(`Leave request state successfully updated to: ${nextStatus.toUpperCase()}`);
+    toast.success(`Leave request state successfully updated to: ${nextStatus.toUpperCase()}`);
   };
 
   const balances = [
@@ -217,15 +219,16 @@ export default function LeavesPage() {
             <div className="space-y-3 text-sm">
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-zinc-400">Leave Type</label>
-                <select
-                  value={leaveType}
-                  onChange={(e) => setLeaveType(e.target.value)}
-                  className="w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="casual">Casual Leave</option>
-                  <option value="sick">Sick Leave</option>
-                  <option value="earned">Earned Leave</option>
-                </select>
+                <Select value={leaveType} onValueChange={setLeaveType}>
+                  <SelectTrigger className="w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 h-auto min-h-10">
+                    <SelectValue placeholder="Select Leave Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="casual">Casual Leave</SelectItem>
+                    <SelectItem value="sick">Sick Leave</SelectItem>
+                    <SelectItem value="earned">Earned Leave</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

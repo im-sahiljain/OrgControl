@@ -10,6 +10,7 @@ import {
 } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
 import axios from "axios";
+import { motion } from "framer-motion";
 import {
   Users,
   Briefcase,
@@ -33,6 +34,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { RootState } from "@/app/reduxToolkit/store";
 import { VirtualizedList } from "@/app/components/VirtualizedList";
+import toast from "react-hot-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   DragDropManager,
   Draggable,
@@ -109,7 +118,6 @@ const CandidateCard = React.memo(
     return (
       <div
         ref={cardRef}
-        onClick={() => onClick(cand)}
         className={`relative p-3 h-24 bg-white dark:bg-zinc-900 border rounded-lg shadow-sm transition-all space-y-2 group overflow-hidden select-none ${
           isSelected
             ? "border-blue-500 ring-2 ring-blue-200 dark:ring-blue-800/50 cursor-grab"
@@ -156,9 +164,17 @@ const CandidateCard = React.memo(
         </div>
 
         <div className="flex justify-between items-start gap-1 pl-5">
-          <h4 className="font-bold text-xs text-zinc-900 dark:text-zinc-55 truncate group-hover:text-blue-600 transition-colors">
-            {cand.name}
-          </h4>
+          <div className="flex items-center gap-1">
+            <h4 className="font-bold text-xs text-zinc-900 dark:text-zinc-55 truncate group-hover:text-blue-600 transition-colors">
+              {cand.name}
+            </h4>
+            <button
+              onClick={() => onClick(cand)}
+              className="h-4 w-4 rounded-full bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 flex items-center justify-center text-[8px] font-bold hover:cursor-pointer hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors shrink-0"
+            >
+              i
+            </button>
+          </div>
           <span
             className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded mr-4 ${
               cand.matchScore >= 85
@@ -176,17 +192,17 @@ const CandidateCard = React.memo(
           {cand.email}
         </p>
 
-        <div className="flex flex-wrap gap-1 pl-5">
-          {cand.skills?.slice(0, 3).map((sk: string) => (
+        <div className="flex gap-1 pl-5 items-center overflow-hidden">
+          {cand.skills?.slice(0, 3).map((sk: string, idx: number) => (
             <span
               key={sk}
-              className="text-[9px] px-1.5 py-0.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800/80 rounded text-zinc-500"
+              className="text-[9px] px-1.5 py-0.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800/80 rounded text-zinc-500 shrink-0"
             >
               {sk}
             </span>
           ))}
-          {cand.skills?.length > 3 && (
-            <span className="text-[9px] text-zinc-400 font-bold pl-0.5">
+          {cand.skills && cand.skills.length > 3 && (
+            <span className="text-[9px] text-zinc-400 font-bold shrink-0">
               +{cand.skills.length - 3}
             </span>
           )}
@@ -317,6 +333,32 @@ export default function RecruitmentPipeline({ feature }: { feature: any }) {
   const [batchCurrentName, setBatchCurrentName] = useState("");
   const [searchMethod, setSearchMethod] = useState<string | null>(null);
 
+  // Cache of RAG search results per Job ID to preserve data on dropdown changes
+  const [ragResultsCache, setRagResultsCache] = useState<Record<string, any[]>>(
+    {},
+  );
+  const [ragQueriesCache, setRagQueriesCache] = useState<
+    Record<string, string>
+  >({});
+  const [ragMethodsCache, setRagMethodsCache] = useState<
+    Record<string, string>
+  >({});
+
+  // Synchronize displayed RAG search data when the selected Job changes
+  useEffect(() => {
+    if (selectedJobId) {
+      setRagResults(ragResultsCache[selectedJobId] || null);
+      setRagSearchQuery(ragQueriesCache[selectedJobId] || "");
+      setSearchMethod(ragMethodsCache[selectedJobId] || null);
+      setSearchError(null);
+    } else {
+      setRagResults(null);
+      setRagSearchQuery("");
+      setSearchMethod(null);
+      setSearchError(null);
+    }
+  }, [selectedJobId, ragResultsCache, ragQueriesCache, ragMethodsCache]);
+
   // Multi-select state for drag-and-drop
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const selectedIdsRef = useRef<Set<string>>(new Set());
@@ -337,7 +379,6 @@ export default function RecruitmentPipeline({ feature }: { feature: any }) {
   const [jobDesc, setJobDesc] = useState("");
   const [jobReqs, setJobReqs] = useState("");
 
-  // ---------------- RAG & SEMANTIC SEARCH HANDLERS ----------------
   const runRagSearch = async (query: string = "") => {
     if (!selectedJobId) return;
     setSearchingRag(true);
@@ -346,17 +387,26 @@ export default function RecruitmentPipeline({ feature }: { feature: any }) {
       const res = await axios.post("/api/candidates/match", {
         jobId: selectedJobId,
         searchQuery: query,
-        limit: 20
+        limit: 20,
       });
       if (res.data.success) {
-        setRagResults(res.data.data);
-        setSearchMethod(res.data.searchMethod);
+        const results = res.data.data;
+        const method = res.data.searchMethod;
+        setRagResults(results);
+        setSearchMethod(method);
+
+        // Save to cache
+        setRagResultsCache((prev) => ({ ...prev, [selectedJobId]: results }));
+        setRagQueriesCache((prev) => ({ ...prev, [selectedJobId]: query }));
+        setRagMethodsCache((prev) => ({ ...prev, [selectedJobId]: method }));
       } else {
         setSearchError(res.data.error || "Failed to search candidates.");
       }
     } catch (err: any) {
       console.error(err);
-      setSearchError(err.response?.data?.error || "Error connecting to search service.");
+      setSearchError(
+        err.response?.data?.error || "Error connecting to search service.",
+      );
     } finally {
       setSearchingRag(false);
     }
@@ -364,84 +414,152 @@ export default function RecruitmentPipeline({ feature }: { feature: any }) {
 
   const handleBatchScreen = async () => {
     if (!selectedJobId) return;
-    
+
     setBatchScreening(true);
     setBatchProgress(0);
     setBatchCurrentName("");
-    
+
     try {
-      const res = await axios.get(`/api/candidates?orgId=${orgId}&jobId=${selectedJobId}`);
+      const res = await axios.get(
+        `/api/candidates?orgId=${orgId}&jobId=${selectedJobId}`,
+      );
       const allCandidates = res.data.data || [];
       const unscreened = allCandidates.filter((c: any) => !c.isAiScreened);
-      
-      if (unscreened.length === 0) {
-        alert("All candidates for this job posting are already AI-screened.");
-        setBatchScreening(false);
-        return;
-      }
-      
-      setBatchTotal(unscreened.length);
-      let count = 0;
-      
-      for (const cand of unscreened) {
-        setBatchCurrentName(cand.name);
-        
+
+      const executeScreening = async (candidatesToScreen: any[]) => {
+        setBatchTotal(candidatesToScreen.length);
+        let count = 0;
+
         try {
-          // A. Fetch job position details to get the job title
-          const jobRes = await axios.get(`/api/jobs/${cand.jobId}`);
-          const jobTitle = jobRes.data.data?.title || "Software Engineer";
-          
-          // B. Call parse API
-          const parseRes = await axios.post("/api/candidates/parse", {
-            name: cand.name,
-            email: cand.email,
-            phone: cand.phone,
-            jobTitle,
-            resumeUrl: cand.resumeUrl
+          for (const cand of candidatesToScreen) {
+            setBatchCurrentName(cand.name);
+            try {
+              const jobRes = await axios.get(`/api/jobs/${cand.jobId}`);
+              const jobTitle = jobRes.data.data?.title || "Software Engineer";
+
+              const parseRes = await axios.post("/api/candidates/parse", {
+                name: cand.name,
+                email: cand.email,
+                phone: cand.phone,
+                jobTitle,
+                resumeUrl: cand.resumeUrl,
+              });
+
+              const aiInsights = parseRes.data.data;
+
+              await axios.put("/api/candidates", {
+                id: cand._id,
+                isAiScreened: true,
+                matchScore: aiInsights.matchScore,
+                skills: aiInsights.skills,
+                summary: aiInsights.summary,
+                pros: aiInsights.pros,
+                cons: aiInsights.cons,
+                interviewQuestions: aiInsights.interviewQuestions,
+                resumeText: aiInsights.extractedResumeText || "",
+              });
+            } catch (err) {
+              console.error(`Failed to screen candidate ${cand.name}`, err);
+            }
+
+            count++;
+            setBatchProgress(count);
+            await new Promise((resolve) => setTimeout(resolve, 1500));
+          }
+
+          toast.success(
+            `Batch AI screening completed successfully! Processed ${count} candidate(s).`,
+          );
+          queryClient.invalidateQueries({
+            queryKey: ["recruitment-candidates"],
           });
-          
-          const aiInsights = parseRes.data.data;
-          
-          // C. Save updated insights to database
-          await axios.put("/api/candidates", {
-            id: cand._id,
-            isAiScreened: true,
-            matchScore: aiInsights.matchScore,
-            skills: aiInsights.skills,
-            summary: aiInsights.summary,
-            pros: aiInsights.pros,
-            cons: aiInsights.cons,
-            interviewQuestions: aiInsights.interviewQuestions,
-            resumeText: aiInsights.extractedResumeText || ""
-          });
-        } catch (err) {
-          console.error(`Failed to screen candidate ${cand.name}`, err);
+          runRagSearch(ragSearchQuery);
+        } catch (err: any) {
+          console.error(err);
+          toast.error(
+            "Failed to run batch screening: " +
+              (err.response?.data?.error || err.message),
+          );
+        } finally {
+          setBatchScreening(false);
         }
-        
-        count++;
-        setBatchProgress(count);
-        
-        // Add a 1.5s delay between candidates to respect rate limits
-        await new Promise(resolve => setTimeout(resolve, 1500));
+      };
+
+      if (unscreened.length === 0) {
+        if (allCandidates.length === 0) {
+          toast("No candidates found for this job posting.");
+          setBatchScreening(false);
+          return;
+        }
+
+        toast(
+          (t) => (
+            <div className="flex flex-col gap-3">
+              <p className="text-sm font-medium">
+                All candidates for this job posting are already AI-screened.
+                Would you like to screen all of them again?
+              </p>
+              <div className="flex gap-2 justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    toast.dismiss(t.id);
+                    setBatchScreening(false);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    toast.dismiss(t.id);
+                    executeScreening(allCandidates);
+                  }}
+                >
+                  OK
+                </Button>
+              </div>
+            </div>
+          ),
+          { duration: Infinity, position: "top-center" },
+        );
+      } else {
+        executeScreening(unscreened);
       }
-      
-      alert(`Batch AI screening completed successfully! Processed ${count} candidate(s).`);
-      queryClient.invalidateQueries({ queryKey: ["recruitment-candidates"] });
-      runRagSearch(ragSearchQuery);
     } catch (err: any) {
       console.error(err);
-      alert("Failed to run batch screening: " + (err.response?.data?.error || err.message));
-    } finally {
+      toast.error(
+        "Failed to fetch candidates: " +
+          (err.response?.data?.error || err.message),
+      );
       setBatchScreening(false);
     }
   };
 
-  const handleUpdateStageFromRag = async (candidateId: string, newStage: string) => {
+  const handleUpdateStageFromRag = async (
+    candidateId: string,
+    newStage: string,
+  ) => {
     try {
       await updateCandidateStageMutation.mutateAsync({ candidateId, newStage });
-      setRagResults(prev => 
-        prev ? prev.map(c => c._id === candidateId ? { ...c, stage: newStage } : c) : null
+      setRagResults((prev) =>
+        prev
+          ? prev.map((c) =>
+              c._id === candidateId ? { ...c, stage: newStage } : c,
+            )
+          : null,
       );
+      setRagResultsCache((prev) => {
+        const cached = prev[selectedJobId];
+        if (!cached) return prev;
+        return {
+          ...prev,
+          [selectedJobId]: cached.map((c) =>
+            c._id === candidateId ? { ...c, stage: newStage } : c,
+          ),
+        };
+      });
     } catch (err) {
       console.error("Failed to update candidate stage from RAG list:", err);
     }
@@ -577,10 +695,10 @@ export default function RecruitmentPipeline({ feature }: { feature: any }) {
       setJobDesc("");
       setJobReqs("");
       setActiveTab("jobs");
-      alert("Job posting successfully created!");
+      toast.success("Job posting successfully created!");
     },
     onError: (err: any) => {
-      alert(err.response?.data?.error || "Failed to create job posting.");
+      toast.error(err.response?.data?.error || "Failed to create job posting.");
     },
   });
 
@@ -724,7 +842,7 @@ export default function RecruitmentPipeline({ feature }: { feature: any }) {
   const handlePostJob = (e: React.FormEvent) => {
     e.preventDefault();
     if (!jobTitle || !jobDesc || !jobLoc) {
-      alert("Please fill all mandatory fields.");
+      toast.error("Please fill all mandatory fields.");
       return;
     }
     const requirements = jobReqs
@@ -848,35 +966,40 @@ export default function RecruitmentPipeline({ feature }: { feature: any }) {
         </div>
 
         {/* Tab triggers */}
-        <div className="flex bg-zinc-100 dark:bg-zinc-900 p-1 rounded-lg border border-zinc-200/50 dark:border-zinc-800 text-xs font-semibold select-none shrink-0 w-fit">
-          <button
-            onClick={() => setActiveTab("candidates")}
-            className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 ${activeTab === "candidates" ? "bg-white dark:bg-zinc-850 shadow-sm text-zinc-900 dark:text-white" : "text-zinc-500 hover:text-zinc-850 dark:hover:text-zinc-300"}`}
-          >
-            <Users className="h-4 w-4" />
-            Candidates Board
-          </button>
-          <button
-            onClick={() => setActiveTab("jobs")}
-            className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 ${activeTab === "jobs" ? "bg-white dark:bg-zinc-850 shadow-sm text-zinc-900 dark:text-white" : "text-zinc-500 hover:text-zinc-850 dark:hover:text-zinc-300"}`}
-          >
-            <Briefcase className="h-4 w-4" />
-            Active Postings
-          </button>
-          <button
-            onClick={() => setActiveTab("post-job")}
-            className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 ${activeTab === "post-job" ? "bg-white dark:bg-zinc-850 shadow-sm text-zinc-900 dark:text-white" : "text-zinc-500 hover:text-zinc-850 dark:hover:text-zinc-300"}`}
-          >
-            <Plus className="h-4 w-4" />
-            Create Posting
-          </button>
-          <button
-            onClick={() => setActiveTab("rag-search")}
-            className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 ${activeTab === "rag-search" ? "bg-white dark:bg-zinc-850 shadow-sm text-zinc-900 dark:text-white" : "text-zinc-500 hover:text-zinc-850 dark:hover:text-zinc-300"}`}
-          >
-            <Sparkles className="h-4 w-4 text-violet-650" />
-            Semantic RAG Search
-          </button>
+        <div className="flex bg-zinc-100 dark:bg-zinc-900 p-1 rounded-lg border border-zinc-200/50 dark:border-zinc-800 text-xs font-semibold select-none shrink-0 w-full overflow-x-auto whitespace-nowrap scrollbar-none gap-1 md:w-fit">
+          {[
+            { id: "candidates", label: "Candidates Board", icon: Users },
+            { id: "jobs", label: "Active Postings", icon: Briefcase },
+            { id: "post-job", label: "Create Posting", icon: Plus },
+            {
+              id: "rag-search",
+              label: "Semantic RAG Search",
+              icon: Sparkles,
+              iconClass: "text-violet-650",
+            },
+          ].map((t) => {
+            const Icon = t.icon;
+            const isActive = activeTab === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setActiveTab(t.id as any)}
+                className={`relative px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 cursor-pointer shrink-0 ${isActive ? "text-zinc-900 dark:text-white" : "text-zinc-500 hover:text-zinc-850 dark:hover:text-zinc-300"}`}
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="active-tab-indicator"
+                    className="absolute inset-0 bg-white dark:bg-zinc-850 shadow-sm rounded-md"
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  />
+                )}
+                <span className="relative z-10 flex items-center gap-1.5">
+                  <Icon className={`h-4 w-4 ${t.iconClass || ""}`} />
+                  {t.label}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -891,17 +1014,22 @@ export default function RecruitmentPipeline({ feature }: { feature: any }) {
             {loadingJobs ? (
               <Loader2 className="h-4 w-4 animate-spin text-zinc-500" />
             ) : jobs && jobs.length > 0 ? (
-              <select
-                value={selectedJobId}
-                onChange={(e) => setSelectedJobId(e.target.value)}
-                className="px-3 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900 text-xs focus:outline-none font-bold focus:ring-1 focus:ring-blue-500 text-zinc-850 dark:text-zinc-100 max-w-full"
-              >
-                {jobs.map((job: any) => (
-                  <option key={job._id} value={job._id}>
-                    {job.title} ({job.location})
-                  </option>
-                ))}
-              </select>
+              <Select value={selectedJobId} onValueChange={setSelectedJobId}>
+                <SelectTrigger className="px-3 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900 text-xs focus:outline-none font-bold focus:ring-1 focus:ring-blue-500 text-zinc-850 dark:text-zinc-100 max-w-full">
+                  <SelectValue placeholder="Select Job" />
+                </SelectTrigger>
+                <SelectContent
+                  position="popper"
+                  align="start"
+                  className="w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-2rem)]"
+                >
+                  {jobs.map((job: any) => (
+                    <SelectItem key={job._id} value={job._id}>
+                      {job.title} ({job.location})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             ) : (
               <span className="text-xs text-zinc-400 italic">
                 No job postings created yet.
@@ -1068,113 +1196,196 @@ export default function RecruitmentPipeline({ feature }: { feature: any }) {
 
       {/* Create Job Posting Tab */}
       {activeTab === "post-job" && (
-        <form
-          onSubmit={handlePostJob}
-          className="max-w-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm space-y-4"
-        >
-          <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-50 border-b border-zinc-100 dark:border-zinc-850 pb-3">
-            Draft a New Job Posting
-          </h3>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start w-full">
+          {/* Form: Left Column (7 cols) */}
+          <form
+            onSubmit={handlePostJob}
+            className="lg:col-span-7 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm space-y-4"
+          >
+            <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-50 border-b border-zinc-100 dark:border-zinc-850 pb-3">
+              Draft a New Job Posting
+            </h3>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5 sm:col-span-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5 sm:col-span-2">
+                <label className="text-xs font-semibold text-zinc-500">
+                  Job Title <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  type="text"
+                  placeholder="Senior Fullstack Developer (Next.js / Node)"
+                  value={jobTitle}
+                  onChange={(e) => setJobTitle(e.target.value)}
+                  className="focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-zinc-500">
+                  Department
+                </label>
+                <Select value={jobDept} onValueChange={setJobDept}>
+                  <SelectTrigger className="w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 text-zinc-800 dark:text-zinc-100 h-9 font-semibold">
+                    <SelectValue placeholder="Select Department" />
+                  </SelectTrigger>
+                  <SelectContent
+                    position="popper"
+                    align="start"
+                    className="w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-2rem)]"
+                  >
+                    <SelectItem value="Engineering">Engineering</SelectItem>
+                    <SelectItem value="Human Resources">
+                      Human Resources
+                    </SelectItem>
+                    <SelectItem value="Sales">Sales</SelectItem>
+                    <SelectItem value="Finance">Finance</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-zinc-500">
+                  Job Location <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  type="text"
+                  placeholder="Remote, Mumbai, Bengaluru"
+                  value={jobLoc}
+                  onChange={(e) => setJobLoc(e.target.value)}
+                  className="focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-zinc-500">
+                  Employment Type
+                </label>
+                <Select value={jobType} onValueChange={setJobType}>
+                  <SelectTrigger className="w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 text-zinc-800 dark:text-zinc-100 h-9 font-semibold">
+                    <SelectValue placeholder="Select Employment Type" />
+                  </SelectTrigger>
+                  <SelectContent
+                    position="popper"
+                    align="start"
+                    className="w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-2rem)]"
+                  >
+                    <SelectItem value="Full-time">Full-time</SelectItem>
+                    <SelectItem value="Part-time">Part-time</SelectItem>
+                    <SelectItem value="Contract">Contract</SelectItem>
+                    <SelectItem value="Internship">Internship</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
               <label className="text-xs font-semibold text-zinc-500">
-                Job Title <span className="text-red-500">*</span>
+                Job Description <span className="text-red-500">*</span>
               </label>
-              <Input
-                type="text"
-                placeholder="Senior Fullstack Developer (Next.js / Node)"
-                value={jobTitle}
-                onChange={(e) => setJobTitle(e.target.value)}
+              <textarea
+                placeholder="Provide a description of responsibilities, company mission, and core team stack."
+                rows={4}
+                value={jobDesc}
+                onChange={(e) => setJobDesc(e.target.value)}
+                className="w-full rounded-lg border border-zinc-200 dark:border-zinc-850 bg-white dark:bg-zinc-950 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 text-zinc-800 dark:text-zinc-100"
                 required
               />
             </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-zinc-500">
-                Department
+                Qualifications & Requirements (One per line)
               </label>
-              <select
-                value={jobDept}
-                onChange={(e) => setJobDept(e.target.value)}
-                className="w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 text-zinc-800 dark:text-zinc-100 h-9 font-semibold"
-              >
-                <option value="Engineering">Engineering</option>
-                <option value="Human Resources">Human Resources</option>
-                <option value="Sales">Sales</option>
-                <option value="Finance">Finance</option>
-              </select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-zinc-500">
-                Job Location <span className="text-red-500">*</span>
-              </label>
-              <Input
-                type="text"
-                placeholder="Remote, Mumbai, Bengaluru"
-                value={jobLoc}
-                onChange={(e) => setJobLoc(e.target.value)}
-                required
+              <textarea
+                placeholder="5+ years React production experience&#10;Proficiency in TypeScript type mappings&#10;Familiarity with Mongoose and compound indices"
+                rows={3}
+                value={jobReqs}
+                onChange={(e) => setJobReqs(e.target.value)}
+                className="w-full rounded-lg border border-zinc-200 dark:border-zinc-850 bg-white dark:bg-zinc-950 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 text-zinc-800 dark:text-zinc-100"
               />
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-zinc-500">
-                Employment Type
-              </label>
-              <select
-                value={jobType}
-                onChange={(e) => setJobType(e.target.value)}
-                className="w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 text-zinc-800 dark:text-zinc-100 h-9 font-semibold"
+            <div className="flex justify-end pt-3 border-t border-zinc-100 dark:border-zinc-850">
+              <Button
+                type="submit"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold cursor-pointer"
+                disabled={createJobMutation.isPending}
               >
-                <option value="Full-time">Full-time</option>
-                <option value="Part-time">Part-time</option>
-                <option value="Contract">Contract</option>
-                <option value="Internship">Internship</option>
-              </select>
+                {createJobMutation.isPending
+                  ? "Creating Posting..."
+                  : "Publish Job Posting"}
+              </Button>
+            </div>
+          </form>
+
+          {/* Preview: Right Column (5 cols) */}
+          <div className="lg:col-span-5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm space-y-4 lg:sticky lg:top-6">
+            <div className="flex justify-between items-center border-b border-zinc-100 dark:border-zinc-800 pb-3">
+              <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                Live Public Page Preview
+              </h3>
+              <span className="text-[9px] font-bold px-2 py-0.5 bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 rounded-full border border-blue-100 dark:border-blue-900/50">
+                Careers Portal Draft
+              </span>
+            </div>
+
+            <div className="space-y-5 text-xs">
+              <div className="space-y-2.5">
+                <span className="px-2 py-0.5 text-[9px] font-extrabold uppercase bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 rounded-md border border-blue-100/50 dark:border-blue-900/30 w-fit block">
+                  {jobDept || "Department"}
+                </span>
+                <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-55 leading-snug">
+                  {jobTitle || "Untitled Job Posting (Draft)"}
+                </h1>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-zinc-500 font-semibold">
+                  <span className="flex items-center gap-1">
+                    <MapPin className="h-3.5 w-3.5 text-zinc-400 shrink-0" />{" "}
+                    {jobLoc || "Remote"}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3.5 w-3.5 text-zinc-400 shrink-0" />{" "}
+                    {jobType || "Full-time"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="border-t border-zinc-100 dark:border-zinc-800 pt-4 space-y-2">
+                <h3 className="font-bold text-[10px] text-zinc-800 dark:text-zinc-200 uppercase tracking-wider">
+                  Position Description
+                </h3>
+                <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed whitespace-pre-wrap min-h-[60px]">
+                  {jobDesc ||
+                    "Job description details, responsibilities, and team info will display here in real-time."}
+                </p>
+              </div>
+
+              <div className="border-t border-zinc-100 dark:border-zinc-800 pt-4 space-y-2">
+                <h3 className="font-bold text-[10px] text-zinc-800 dark:text-zinc-200 uppercase tracking-wider">
+                  Requirements & Qualifications
+                </h3>
+                {jobReqs.trim() ? (
+                  <ul className="list-disc pl-4 space-y-1.5 text-xs text-zinc-550 dark:text-zinc-450">
+                    {jobReqs.split("\n").map(
+                      (req, idx) =>
+                        req.trim() && (
+                          <li key={idx} className="leading-relaxed">
+                            {req.trim()}
+                          </li>
+                        ),
+                    )}
+                  </ul>
+                ) : (
+                  <p className="text-xs text-zinc-400 italic">
+                    Requirements specified in the form will appear as a list
+                    here.
+                  </p>
+                )}
+              </div>
             </div>
           </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-zinc-500">
-              Job Description <span className="text-red-500">*</span>
-            </label>
-            <textarea
-              placeholder="Provide a description of responsibilities, company mission, and core team stack."
-              rows={4}
-              value={jobDesc}
-              onChange={(e) => setJobDesc(e.target.value)}
-              className="w-full rounded-lg border border-zinc-200 dark:border-zinc-850 bg-white dark:bg-zinc-950 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 text-zinc-800 dark:text-zinc-100"
-              required
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-zinc-500">
-              Qualifications & Requirements (One per line)
-            </label>
-            <textarea
-              placeholder="5+ years React production experience&#10;Proficiency in TypeScript type mappings&#10;Familiarity with Mongoose and compound indices"
-              rows={3}
-              value={jobReqs}
-              onChange={(e) => setJobReqs(e.target.value)}
-              className="w-full rounded-lg border border-zinc-200 dark:border-zinc-850 bg-white dark:bg-zinc-950 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 text-zinc-800 dark:text-zinc-100"
-            />
-          </div>
-
-          <div className="flex justify-end pt-3 border-t border-zinc-100 dark:border-zinc-850">
-            <Button
-              type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
-              disabled={createJobMutation.isPending}
-            >
-              {createJobMutation.isPending
-                ? "Creating Posting..."
-                : "Publish Job Posting"}
-            </Button>
-          </div>
-        </form>
+        </div>
       )}
 
       {/* RAG Vector Search View */}
@@ -1189,17 +1400,22 @@ export default function RecruitmentPipeline({ feature }: { feature: any }) {
               {loadingJobs ? (
                 <Loader2 className="h-4 w-4 animate-spin text-zinc-500" />
               ) : jobs && jobs.length > 0 ? (
-                <select
-                  value={selectedJobId}
-                  onChange={(e) => setSelectedJobId(e.target.value)}
-                  className="px-3 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900 text-xs focus:outline-none font-bold focus:ring-1 focus:ring-blue-500 text-zinc-850 dark:text-zinc-100 max-w-full"
-                >
-                  {jobs.map((job: any) => (
-                    <option key={job._id} value={job._id}>
-                      {job.title} ({job.location})
-                    </option>
-                  ))}
-                </select>
+                <Select value={selectedJobId} onValueChange={setSelectedJobId}>
+                  <SelectTrigger className="px-3 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900 text-xs focus:outline-none font-bold focus:ring-1 focus:ring-blue-500 text-zinc-850 dark:text-zinc-100 max-w-full">
+                    <SelectValue placeholder="Select Job" />
+                  </SelectTrigger>
+                  <SelectContent
+                    position="popper"
+                    align="start"
+                    className="w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-2rem)]"
+                  >
+                    {jobs.map((job: any) => (
+                      <SelectItem key={job._id} value={job._id}>
+                        {job.title} ({job.location})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               ) : (
                 <span className="text-xs text-zinc-400 italic">
                   No job postings created yet.
@@ -1235,16 +1451,22 @@ export default function RecruitmentPipeline({ feature }: { feature: any }) {
             <div className="p-4 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 rounded-xl space-y-2 animate-pulse">
               <div className="flex justify-between text-xxs font-bold text-zinc-500">
                 <span>AI Screening Pipeline Queue...</span>
-                <span>{batchProgress} of {batchTotal} candidates ({Math.round((batchProgress / batchTotal) * 100)}%)</span>
+                <span>
+                  {batchProgress} of {batchTotal} candidates (
+                  {Math.round((batchProgress / batchTotal) * 100)}%)
+                </span>
               </div>
               <div className="w-full bg-zinc-205 dark:bg-zinc-800 h-2 rounded-full overflow-hidden">
-                <div 
+                <div
                   className="bg-violet-600 h-full rounded-full transition-all duration-300"
                   style={{ width: `${(batchProgress / batchTotal) * 100}%` }}
                 />
               </div>
               <p className="text-[10px] text-zinc-400 italic">
-                Processing resume text and generating vector embeddings for: <strong className="text-zinc-650 dark:text-zinc-300">{batchCurrentName}</strong>
+                Processing resume text and generating vector embeddings for:{" "}
+                <strong className="text-zinc-650 dark:text-zinc-300">
+                  {batchCurrentName}
+                </strong>
               </p>
             </div>
           )}
@@ -1257,7 +1479,10 @@ export default function RecruitmentPipeline({ feature }: { feature: any }) {
                 Semantic RAG Profile Search
               </h3>
               <p className="text-xxs text-zinc-505 leading-relaxed">
-                Describe the specific candidate profile, skills, or background you want to find. The Vector Database calculates semantic matching values against resume text and coordinates, sorting results by score.
+                Describe the specific candidate profile, skills, or background
+                you want to find. The Vector Database calculates semantic
+                matching values against resume text and coordinates, sorting
+                results by score.
               </p>
             </div>
 
@@ -1306,7 +1531,9 @@ export default function RecruitmentPipeline({ feature }: { feature: any }) {
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                 Search Mode:{" "}
                 <span className="text-zinc-550 dark:text-zinc-300 uppercase">
-                  {searchMethod === "vectorSearch" ? "MongoDB Atlas Vector Search" : "Local Cosine Similarity Fallback"}
+                  {searchMethod === "vectorSearch"
+                    ? "MongoDB Atlas Vector Search"
+                    : "Local Cosine Similarity Fallback"}
                 </span>
               </div>
             )}
@@ -1346,7 +1573,7 @@ export default function RecruitmentPipeline({ feature }: { feature: any }) {
                           >
                             {cand.name}
                           </button>
-                          
+
                           <span
                             className={`text-[9px] font-extrabold px-2 py-0.5 rounded capitalize ${
                               cand.stage === "offered"
@@ -1425,28 +1652,36 @@ export default function RecruitmentPipeline({ feature }: { feature: any }) {
                               {cand.matchPercentage}%
                             </span>
                           </div>
-                          
+
                           <div className="h-9 w-9 rounded-full border-2 border-zinc-100 dark:border-zinc-800 flex items-center justify-center font-bold text-xs bg-zinc-50 dark:bg-zinc-950">
                             {cand.matchPercentage}
                           </div>
                         </div>
 
                         <div className="flex gap-2">
-                          {cand.stage !== "interviewing" && cand.stage !== "offered" && (
-                            <Button
-                              size="sm"
-                              className="h-8 text-[10px] font-bold bg-blue-600 hover:bg-blue-750 text-white"
-                              onClick={() => handleUpdateStageFromRag(cand._id, "interviewing")}
-                            >
-                              Shortlist
-                            </Button>
-                          )}
+                          {cand.stage !== "interviewing" &&
+                            cand.stage !== "offered" && (
+                              <Button
+                                size="sm"
+                                className="h-8 text-[10px] font-bold bg-blue-600 hover:bg-blue-750 text-white"
+                                onClick={() =>
+                                  handleUpdateStageFromRag(
+                                    cand._id,
+                                    "interviewing",
+                                  )
+                                }
+                              >
+                                Shortlist
+                              </Button>
+                            )}
                           {cand.stage !== "rejected" && (
                             <Button
                               variant="outline"
                               size="sm"
                               className="h-8 text-[10px] font-bold border-zinc-250 text-rose-600 hover:text-rose-700 hover:bg-rose-50/30"
-                              onClick={() => handleUpdateStageFromRag(cand._id, "rejected")}
+                              onClick={() =>
+                                handleUpdateStageFromRag(cand._id, "rejected")
+                              }
                             >
                               Reject
                             </Button>
@@ -1461,7 +1696,8 @@ export default function RecruitmentPipeline({ feature }: { feature: any }) {
               <div className="py-16 text-center bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm text-zinc-450 italic text-xs space-y-2 flex flex-col items-center">
                 <p>No candidates processed for vector matching yet.</p>
                 <p className="text-[10px] font-normal not-italic max-w-sm text-zinc-500">
-                  Ensure candidate resumes are AI-screened to generate their vector embeddings, then enter a search query above.
+                  Ensure candidate resumes are AI-screened to generate their
+                  vector embeddings, then enter a search query above.
                 </p>
               </div>
             )}
@@ -1472,8 +1708,20 @@ export default function RecruitmentPipeline({ feature }: { feature: any }) {
       {/* Candidate Detail AI Insights Panel */}
       {/* Candidate Detail AI Insights Panel */}
       {selectedCandidateId && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex justify-end animate-fade-in">
-          <div className="bg-white dark:bg-zinc-900 border-l border-zinc-200 dark:border-zinc-800 w-full max-w-lg flex flex-col h-full overflow-hidden shadow-2xl animate-slide-in">
+        <motion.div
+          className="fixed inset-0 bg-black/50 z-50 flex justify-end"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <motion.div
+            className="bg-white dark:bg-zinc-900 border-l border-zinc-200 dark:border-zinc-800 w-full max-w-lg flex flex-col h-full overflow-hidden shadow-2xl"
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          >
             {/* Drawer Header */}
             <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex justify-between items-center bg-zinc-50/50 dark:bg-zinc-950/20">
               <div className="space-y-1 overflow-hidden">
@@ -1533,6 +1781,8 @@ export default function RecruitmentPipeline({ feature }: { feature: any }) {
                     {fullCandidate.resumeUrl && (
                       <a
                         href={fullCandidate.resumeUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         download={`${fullCandidate.name.replace(/\s+/g, "_")}_Resume.pdf`}
                       >
                         <Button
@@ -1708,8 +1958,8 @@ export default function RecruitmentPipeline({ feature }: { feature: any }) {
                 Failed to load candidate details.
               </div>
             )}
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
     </div>
   );

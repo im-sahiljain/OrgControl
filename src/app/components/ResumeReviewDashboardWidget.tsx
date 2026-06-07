@@ -13,6 +13,95 @@ import {
   Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { motion } from "framer-motion";
+
+const AutoScrollText = React.memo(({ text, className }: { text: string; className?: string }) => {
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const textRef = React.useRef<HTMLSpanElement>(null);
+  const [scrollAmount, setScrollAmount] = React.useState(0);
+  const [shouldScroll, setShouldScroll] = React.useState(false);
+  const [isMobile, setIsMobile] = React.useState(false);
+
+  const [delay] = React.useState(() => Math.random() * 2);
+
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      setIsMobile(window.innerWidth < 640);
+      const handleResize = () => setIsMobile(window.innerWidth < 640);
+      window.addEventListener("resize", handleResize);
+      return () => window.removeEventListener("resize", handleResize);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    const checkScroll = () => {
+      const container = containerRef.current;
+      const textEl = textRef.current;
+      if (container && textEl) {
+        const diff = container.offsetWidth - textEl.offsetWidth;
+        if (diff < 0) {
+          setScrollAmount(diff);
+          setShouldScroll(true);
+        } else {
+          setScrollAmount(0);
+          setShouldScroll(false);
+        }
+      }
+    };
+
+    checkScroll();
+    const timeoutId = setTimeout(checkScroll, 100);
+    return () => clearTimeout(timeoutId);
+  }, [text, isMobile]);
+
+  const speed = 30; // pixels per second
+  const holdStart = 2; // hold at start (seconds)
+  const holdEnd = 2; // hold at end (seconds)
+  const scrollTime = shouldScroll ? Math.abs(scrollAmount) / speed : 0;
+  const duration = holdStart + scrollTime + holdEnd;
+
+  const startFraction = duration > 0 ? holdStart / duration : 0.25;
+  const endFraction = duration > 0 ? (holdStart + scrollTime) / duration : 0.75;
+
+  const isAppliedFor = text.startsWith("Applied for:");
+  const displayText = isAppliedFor ? text.substring(12).trim() : text;
+
+  return (
+    <div
+      ref={containerRef}
+      className={`overflow-hidden whitespace-nowrap w-full ${className || ""}`}
+    >
+      <motion.span
+        ref={textRef}
+        className="inline-block"
+        animate={
+          isMobile && shouldScroll
+            ? { x: [0, 0, scrollAmount, scrollAmount] }
+            : { x: 0 }
+        }
+        transition={
+          isMobile && shouldScroll
+            ? {
+                ease: "linear",
+                duration: duration,
+                repeat: Infinity,
+                repeatType: "loop",
+                delay: delay,
+                times: [0, startFraction, endFraction, 1],
+              }
+            : undefined
+        }
+      >
+        {isAppliedFor && <span className="text-zinc-400 font-semibold">Applied for: </span>}
+        <span className={isAppliedFor ? "text-zinc-550 dark:text-zinc-300 font-bold" : ""}>
+          {displayText}
+        </span>
+      </motion.span>
+    </div>
+  );
+});
+
+AutoScrollText.displayName = "AutoScrollText";
 
 interface ResumeReviewDashboardWidgetProps {
   orgId: string;
@@ -207,16 +296,13 @@ export default function ResumeReviewDashboardWidget({
                     key={cand._id}
                     className="p-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-150 dark:border-zinc-850/60 rounded-xl flex items-center justify-between gap-4 text-xs"
                   >
-                    <div className="space-y-0.5 overflow-hidden">
-                      <span className="font-bold text-zinc-800 dark:text-zinc-100 block truncate">
-                        {cand.name}
-                      </span>
-                      <span className="text-[10px] text-zinc-400 font-semibold block truncate">
-                        Applied for:{" "}
-                        <span className="text-zinc-500 dark:text-zinc-300 font-bold">
-                          {jobTitle}
-                        </span>
-                      </span>
+                    <div className="space-y-0.5 overflow-hidden w-full max-w-[150px] sm:max-w-none">
+                      <div className="font-bold text-zinc-800 dark:text-zinc-100 block w-full overflow-hidden">
+                        <AutoScrollText text={cand.name} />
+                      </div>
+                      <div className="text-[10px] text-zinc-400 font-semibold w-full overflow-hidden">
+                        <AutoScrollText text={`Applied for: ${jobTitle}`} />
+                      </div>
                     </div>
 
                     <div className="flex items-center gap-3 shrink-0">

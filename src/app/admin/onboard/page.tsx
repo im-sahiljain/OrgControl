@@ -5,6 +5,7 @@ import axios from "axios";
 import { Cpu, Building2, User, Mail, Loader2, Plus, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function OnboardTenantPage() {
   const [formData, setFormData] = useState({
@@ -85,15 +86,16 @@ export default function OnboardTenantPage() {
             </div>
             <div>
               <label className="text-sm font-bold text-zinc-700 dark:text-zinc-300 mb-2 block">Billing Plan</label>
-              <select 
-                value={formData.plan} 
-                onChange={e => setFormData({...formData, plan: e.target.value})}
-                className="w-full h-11 px-3 py-2 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-zinc-50 dark:bg-zinc-950 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              >
-                <option value="Starter">Starter (1-50 employees)</option>
-                <option value="Professional">Professional (51-100 employees)</option>
-                <option value="Enterprise">Enterprise (100+ employees)</option>
-              </select>
+              <Select value={formData.plan} onValueChange={(val) => setFormData({...formData, plan: val})}>
+                <SelectTrigger className="w-full h-11 px-3 py-2 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-zinc-50 dark:bg-zinc-950 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  <SelectValue placeholder="Select Plan" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Starter">Starter (1-50 employees)</SelectItem>
+                  <SelectItem value="Professional">Professional (51-100 employees)</SelectItem>
+                  <SelectItem value="Enterprise">Enterprise (100+ employees)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label className="text-sm font-bold text-zinc-700 dark:text-zinc-300 mb-2 block">Initial Admin Name</label>

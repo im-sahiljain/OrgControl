@@ -121,7 +121,7 @@ export async function POST(req: Request) {
       email,
       phone,
       resumeUrl,
-      stage: stage || "applied",
+      stage: "screened",
       isAiScreened: isAiScreened !== undefined ? isAiScreened : false,
       matchScore: matchScore || 0,
       skills: skills || [],
@@ -186,7 +186,7 @@ export async function PUT(req: Request) {
     if (cons !== undefined) updateData.cons = cons;
     if (interviewQuestions !== undefined)
       updateData.interviewQuestions = interviewQuestions;
-    
+
     if (resumeText !== undefined) {
       updateData.resumeText = resumeText;
       if (resumeText) {
