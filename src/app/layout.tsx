@@ -18,7 +18,34 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Org Control",
-  description: "Manage your organization with ease",
+  description:
+    "Automate candidate resume screening and run semantic search on candidate pools using Google Gemini.",
+  openGraph: {
+    title: "Org Control — AI-Powered Resume Screening",
+    description:
+      "Automate candidate resume screening and run semantic search on candidate pools using Google Gemini.",
+    url: "https://orgcontrol.imsahiljain.in/",
+    siteName: "Org Control",
+    images: [
+      {
+        url: "https://res.cloudinary.com/dagkrnoap/image/upload/v1781687895/Screenshot_from_2026-06-17_14-46-34_mtecab.png",
+        width: 1897,
+        height: 974,
+        alt: "Org Control Workspace Dashboard Preview",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Org Control — AI-Powered Resume Screening",
+    description:
+      "Automate candidate resume screening and run semantic search on candidate pools using Google Gemini.",
+    images: [
+      "https://res.cloudinary.com/dagkrnoap/image/upload/v1781687895/Screenshot_from_2026-06-17_14-46-34_mtecab.png",
+    ],
+  },
 };
 
 export default function RootLayout({
