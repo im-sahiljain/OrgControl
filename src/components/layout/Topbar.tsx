@@ -6,17 +6,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
-import {
-  Bell,
-  Search,
-  Menu,
-  LogOut,
-  ShieldAlert,
-  Building2,
-} from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { Menu, Building2 } from "lucide-react";
 import type { RootState } from "../../app/reduxToolkit/store";
-import { setAuthSession, logoutUser } from "../../app/reduxToolkit/slice";
+import { setAuthSession } from "../../app/reduxToolkit/slice";
 
 export function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
   const dispatch = useDispatch();
@@ -130,15 +122,6 @@ export function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await axios.post("/api/auth/logout");
-    } catch (e) {
-      console.error("Server logout error:", e);
-    }
-    dispatch(logoutUser());
-    router.push("/");
-  };
 
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-zinc-200 bg-white/70 px-4 md:px-6 backdrop-blur-md dark:border-zinc-800 dark:bg-black/50">
@@ -217,13 +200,6 @@ export function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
                 {user.name.charAt(0)}
               </div>
             </Link>
-            <button
-              onClick={handleLogout}
-              className="p-2 text-zinc-400 hover:bg-red-50 dark:hover:bg-red-950/20 hover:text-red-600 rounded-full transition-colors"
-              title="Logout Profile Session"
-            >
-              <LogOut className="h-4.5 w-4.5" />
-            </button>
           </div>
         ) : (
           <button

@@ -431,6 +431,24 @@ export default function RecruitmentPipeline({ feature }: { feature: any }) {
     enabled: !!orgId,
   });
 
+  // Fetch all candidates for the selected job to calculate stats (Total, Screened, Unscreened)
+  const { data: jobCandidates = [], isLoading: loadingJobCandidates } = useQuery({
+    queryKey: ["recruitment-candidates", orgId, selectedJobId, "all-job"],
+    queryFn: async () => {
+      if (!orgId || !selectedJobId) return [];
+      const res = await axios.get(
+        `/api/candidates?orgId=${orgId}&jobId=${selectedJobId}&limit=1000`
+      );
+      return res.data.data || [];
+    },
+    enabled: !!orgId && !!selectedJobId,
+  });
+
+  const totalCandidates = jobCandidates.length;
+  const screenedCandidates = jobCandidates.filter((c: any) => c.isAiScreened).length;
+  const unscreenedCandidates = jobCandidates.filter((c: any) => !c.isAiScreened).length;
+
+
   useEffect(() => {
     const handler = setTimeout(() => {
       setJobSearch(jobSearchInput.trim());
@@ -1059,6 +1077,10 @@ export default function RecruitmentPipeline({ feature }: { feature: any }) {
           ragResults={ragResults}
           setSelectedCandidateId={setSelectedCandidateId}
           handleUpdateStageFromRag={handleUpdateStageFromRag}
+          totalCandidates={totalCandidates}
+          screenedCandidates={screenedCandidates}
+          unscreenedCandidates={unscreenedCandidates}
+          loadingJobCandidates={loadingJobCandidates}
         />
       )}
       {/* Candidate Detail AI Insights Panel */}

@@ -1,5 +1,11 @@
 import React from "react";
-import { Sparkles, Loader2, Search, RefreshCw, FileText } from "lucide-react";
+import {
+  Sparkles,
+  Loader2,
+  Search,
+  FileText,
+  EqualApproximately,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -29,6 +35,10 @@ interface RagSearchProps {
   ragResults: any[] | null;
   setSelectedCandidateId: (id: string) => void;
   handleUpdateStageFromRag: (id: string, stage: string) => void;
+  totalCandidates: number;
+  screenedCandidates: number;
+  unscreenedCandidates: number;
+  loadingJobCandidates: boolean;
 }
 
 export const RagSearch: React.FC<RagSearchProps> = ({
@@ -50,6 +60,10 @@ export const RagSearch: React.FC<RagSearchProps> = ({
   ragResults,
   setSelectedCandidateId,
   handleUpdateStageFromRag,
+  totalCandidates,
+  screenedCandidates,
+  unscreenedCandidates,
+  loadingJobCandidates,
 }) => {
   return (
     <div className="space-y-6">
@@ -73,7 +87,8 @@ export const RagSearch: React.FC<RagSearchProps> = ({
               >
                 {jobs.map((job: any) => (
                   <SelectItem key={job._id} value={job._id}>
-                    {job.title} ({job.location}){job.status !== "active" && " (Inactive)"}
+                    {job.title} ({job.location})
+                    {job.status !== "active" && " (Inactive)"}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -82,6 +97,24 @@ export const RagSearch: React.FC<RagSearchProps> = ({
             <span className="text-xs text-zinc-400 italic">
               No job postings created yet.
             </span>
+          )}
+
+          {selectedJobId && (
+            <div className="flex items-center gap-3 text-xxs font-bold text-zinc-450 bg-zinc-50 dark:bg-zinc-950/40 px-2.5 py-1 rounded-lg border border-zinc-200/60 dark:border-zinc-850 whitespace-nowrap">
+              {loadingJobCandidates ? (
+                <span className="flex items-center gap-1 text-[10px] text-zinc-400">
+                  <Loader2 className="h-3 w-3 animate-spin" /> Loading stats...
+                </span>
+              ) : (
+                <>
+                  <span>Total: <strong className="text-zinc-700 dark:text-zinc-300 font-extrabold">{totalCandidates}</strong></span>
+                  <span className="text-zinc-200 dark:text-zinc-800">|</span>
+                  <span className="text-violet-650 dark:text-violet-400">Screened: <strong className="font-extrabold">{screenedCandidates}</strong></span>
+                  <span className="text-zinc-200 dark:text-zinc-800">|</span>
+                  <span className="text-amber-600 dark:text-amber-500">Unscreened: <strong className="font-extrabold">{unscreenedCandidates}</strong></span>
+                </>
+              )}
+            </div>
           )}
         </div>
 
@@ -141,7 +174,10 @@ export const RagSearch: React.FC<RagSearchProps> = ({
             Semantic RAG Profile Search
           </h3>
           <p className="text-xxs text-zinc-450 leading-relaxed">
-            Describe the specific candidate profile, skills, or background you want to find. The Vector Database calculates semantic matching values against resume text and coordinates, sorting results by score.
+            Describe the specific candidate profile, skills, or background you
+            want to find. The Vector Database calculates semantic matching
+            values against resume text and coordinates, sorting results by
+            score.
           </p>
         </div>
 
@@ -162,12 +198,17 @@ export const RagSearch: React.FC<RagSearchProps> = ({
             size="sm"
             className="bg-violet-600 hover:bg-violet-750 text-white font-bold h-9 px-4 text-xs shrink-0"
             onClick={() => runRagSearch(ragSearchQuery)}
-            disabled={searchingRag || !selectedJobId}
+            disabled={searchingRag || !selectedJobId || ragSearchQuery === ""}
           >
             {searchingRag ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" /> Searching...
+              </>
             ) : (
-              "Search Pool"
+              <>
+                <Search className="h-3.5 w-3.5" />
+                Search Pool
+              </>
             )}
           </Button>
           <Button
@@ -178,10 +219,18 @@ export const RagSearch: React.FC<RagSearchProps> = ({
               setRagSearchQuery("");
               runRagSearch("");
             }}
-            disabled={searchingRag || !selectedJobId}
+            disabled={searchingRag || !selectedJobId || ragSearchQuery === ""}
           >
-            <RefreshCw className="h-3.5 w-3.5" />
-            Reset (JD Match)
+            {ragSearchQuery === "" && searchingRag ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" /> Matching...
+              </>
+            ) : (
+              <>
+                <EqualApproximately className="h-3.5 w-3.5" />
+                JD Match
+              </>
+            )}
           </Button>
         </div>
 
@@ -324,10 +373,7 @@ export const RagSearch: React.FC<RagSearchProps> = ({
                             size="sm"
                             className="h-8 text-[10px] font-bold bg-blue-600 hover:bg-blue-750 text-white"
                             onClick={() =>
-                              handleUpdateStageFromRag(
-                                cand._id,
-                                "interviewing",
-                              )
+                              handleUpdateStageFromRag(cand._id, "interviewing")
                             }
                           >
                             Shortlist
@@ -355,7 +401,8 @@ export const RagSearch: React.FC<RagSearchProps> = ({
           <div className="py-16 text-center bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm text-zinc-450 italic text-xs space-y-2 flex flex-col items-center">
             <p>No candidates processed for vector matching yet.</p>
             <p className="text-[10px] font-normal not-italic max-w-sm text-zinc-500">
-              Ensure candidate resumes are AI-screened to generate their vector embeddings, then enter a search query above.
+              Ensure candidate resumes are AI-screened to generate their vector
+              embeddings, then enter a search query above.
             </p>
           </div>
         )}

@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useSelector, useDispatch } from "react-redux";
+import axios from "axios";
 import {
   Home,
   Users,
@@ -20,7 +21,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import type { RootState } from "../../app/reduxToolkit/store";
-import { toggleSidebar } from "../../app/reduxToolkit/slice";
+import { toggleSidebar, logoutUser } from "../../app/reduxToolkit/slice";
 
 export function Sidebar({
   isOpen = false,
@@ -33,6 +34,7 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
   const dispatch = useDispatch();
+  const router = useRouter();
   const user = useSelector((state: RootState) => state.employeeUI.user);
   const isAuthenticated = useSelector(
     (state: RootState) => state.employeeUI.isAuthenticated,
@@ -40,6 +42,17 @@ export function Sidebar({
   const isCollapsed = useSelector(
     (state: RootState) => state.employeeUI.isSidebarCollapsed,
   );
+
+  const handleLogout = async () => {
+    try {
+      await axios.post("/api/auth/logout");
+    } catch (e) {
+      console.error("Server logout error:", e);
+    }
+    dispatch(logoutUser());
+    if (onClose) onClose();
+    router.push("/");
+  };
 
   // Filter main nav items dynamically based on the active session role
   const mainNavItems = [
@@ -107,14 +120,14 @@ export function Sidebar({
   ];
 
   const bottomNavItems = [
+    // {
+    //   name: "Settings",
+    //   href: "/settings",
+    //   icon: Settings,
+    //   roles: ["org_admin", "employee", "platform_admin"],
+    // },
     {
-      name: "Settings",
-      href: "/settings",
-      icon: Settings,
-      roles: ["org_admin", "employee", "platform_admin"],
-    },
-    {
-      name: "Switch Profile",
+      name: "Logout",
       href: "/",
       icon: LogOut,
       roles: ["org_admin", "employee", "platform_admin"],
@@ -232,24 +245,17 @@ export function Sidebar({
           <div className="mt-auto border-t border-zinc-200 pt-4 dark:border-zinc-800">
             {filteredBottomNav.map((item) => {
               const isActive = pathname === item.href;
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  title={isCollapsed ? item.name : undefined}
-                  suppressHydrationWarning
-                  className={`flex items-center ${enableTransition ? "transition-all duration-300" : ""} ${
-                    isCollapsed
-                      ? "justify-center p-2 mx-auto w-10 h-10 rounded-lg"
-                      : "gap-3 px-3 py-2 rounded-lg"
-                  } ${
-                    isActive
-                      ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-900/50 dark:text-zinc-50"
-                      : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900/50 dark:hover:text-zinc-50"
-                  }`}
-                >
+              const isLogout = item.name === "Logout";
+              const content = (
+                <>
                   <item.icon
-                    className={`h-5 w-5 shrink-0 ${isActive ? "text-zinc-900 dark:text-zinc-100" : "text-zinc-500 dark:text-zinc-400"}`}
+                    className={`h-5 w-5 shrink-0 ${
+                      isLogout
+                        ? ""
+                        : isActive
+                        ? "text-zinc-900 dark:text-zinc-100"
+                        : "text-zinc-500 dark:text-zinc-400"
+                    }`}
                   />
                   <span
                     suppressHydrationWarning
@@ -257,6 +263,47 @@ export function Sidebar({
                   >
                     {item.name}
                   </span>
+                </>
+              );
+
+              const className = isLogout
+                ? `flex items-center w-full text-left cursor-pointer transition-colors ${enableTransition ? "transition-all duration-300" : ""} ${
+                    isCollapsed
+                      ? "justify-center p-2 mx-auto w-10 h-10 rounded-lg"
+                      : "gap-3 px-3 py-2 rounded-lg"
+                  } text-zinc-400 hover:bg-red-50 dark:hover:bg-red-950/20 hover:text-red-600`
+                : `flex items-center w-full text-left cursor-pointer ${enableTransition ? "transition-all duration-300" : ""} ${
+                    isCollapsed
+                      ? "justify-center p-2 mx-auto w-10 h-10 rounded-lg"
+                      : "gap-3 px-3 py-2 rounded-lg"
+                  } ${
+                    isActive
+                      ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-900/50 dark:text-zinc-50"
+                      : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900/50 dark:hover:text-zinc-50"
+                  }`;
+
+              if (isLogout) {
+                return (
+                  <button
+                    key={item.name}
+                    onClick={handleLogout}
+                    title={isCollapsed ? item.name : undefined}
+                    className={className}
+                  >
+                    {content}
+                  </button>
+                );
+              }
+
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  title={isCollapsed ? item.name : undefined}
+                  suppressHydrationWarning
+                  className={className}
+                >
+                  {content}
                 </Link>
               );
             })}
@@ -337,21 +384,50 @@ export function Sidebar({
           <div className="mt-auto border-t border-zinc-200 pt-4 dark:border-zinc-800">
             {filteredBottomNav.map((item) => {
               const isActive = pathname === item.href;
+              const isLogout = item.name === "Logout";
+              const content = (
+                <>
+                  <item.icon
+                    className={`h-5 w-5 ${
+                      isLogout
+                        ? ""
+                        : isActive
+                        ? "text-zinc-900 dark:text-zinc-100"
+                        : "text-zinc-500 dark:text-zinc-400"
+                    }`}
+                  />
+                  <span className="font-medium text-sm">{item.name}</span>
+                </>
+              );
+
+              const className = isLogout
+                ? `flex items-center gap-3 w-full text-left cursor-pointer rounded-lg px-3 py-2 transition-colors text-zinc-400 hover:bg-red-50 dark:hover:bg-red-950/20 hover:text-red-600`
+                : `flex items-center gap-3 w-full text-left cursor-pointer rounded-lg px-3 py-2 transition-all ${
+                    isActive
+                      ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-900/50 dark:text-zinc-50"
+                      : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900/50 dark:hover:text-zinc-50"
+                  }`;
+
+              if (isLogout) {
+                return (
+                  <button
+                    key={item.name}
+                    onClick={handleLogout}
+                    className={className}
+                  >
+                    {content}
+                  </button>
+                );
+              }
+
               return (
                 <Link
                   key={item.name}
                   href={item.href}
                   onClick={onClose}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all ${
-                    isActive
-                      ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-900/50 dark:text-zinc-50"
-                      : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900/50 dark:hover:text-zinc-50"
-                  }`}
+                  className={className}
                 >
-                  <item.icon
-                    className={`h-5 w-5 ${isActive ? "text-zinc-900 dark:text-zinc-100" : "text-zinc-500 dark:text-zinc-400"}`}
-                  />
-                  <span className="font-medium text-sm">{item.name}</span>
+                  {content}
                 </Link>
               );
             })}

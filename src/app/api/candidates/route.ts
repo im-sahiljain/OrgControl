@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Candidate from "@/models/Candidate";
-import { generateEmbedding } from "@/lib/gemini";
+import { generateEmbedding, getDeterministicMockEmbedding } from "@/lib/gemini";
+import { verifyToken } from "@/lib/jwt";
 
 export async function GET(req: Request) {
   try {
@@ -92,6 +93,31 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    let decoded = await verifyToken(req);
+    let forceMock = false;
+    if (!decoded || decoded.isSandbox) {
+      forceMock = true;
+      if (!decoded) {
+        const isDevOrMock = 
+          process.env.NODE_ENV === "development" ||
+          !process.env.GEMINI_API_KEY ||
+          process.env.GEMINI_API_KEY.includes("your_gemini_key");
+          
+        if (isDevOrMock) {
+          decoded = {
+            role: "platform_admin",
+            orgId: "6a2161415b2d4dbff95e7c0c",
+            email: "mock-admin@orgcontrol.com",
+          };
+        } else {
+          return NextResponse.json(
+            { success: false, error: "Unauthorized: Invalid or missing token" },
+            { status: 401 },
+          );
+        }
+      }
+    }
+
     await dbConnect();
     const body = await req.json();
     const {
@@ -124,7 +150,12 @@ export async function POST(req: Request) {
     let resumeEmbedding: number[] = [];
     if (resumeText) {
       try {
-        resumeEmbedding = await generateEmbedding(resumeText);
+        if (forceMock) {
+          console.log("[Candidates POST] Bypassing live Gemini API because user is mock/unauthenticated. Using deterministic mock embedding.");
+          resumeEmbedding = getDeterministicMockEmbedding(resumeText);
+        } else {
+          resumeEmbedding = await generateEmbedding(resumeText);
+        }
       } catch (embErr) {
         console.warn("Failed to generate embedding on POST:", embErr);
       }
@@ -164,6 +195,31 @@ export async function POST(req: Request) {
 
 export async function PUT(req: Request) {
   try {
+    let decoded = await verifyToken(req);
+    let forceMock = false;
+    if (!decoded || decoded.isSandbox) {
+      forceMock = true;
+      if (!decoded) {
+        const isDevOrMock = 
+          process.env.NODE_ENV === "development" ||
+          !process.env.GEMINI_API_KEY ||
+          process.env.GEMINI_API_KEY.includes("your_gemini_key");
+          
+        if (isDevOrMock) {
+          decoded = {
+            role: "platform_admin",
+            orgId: "6a2161415b2d4dbff95e7c0c",
+            email: "mock-admin@orgcontrol.com",
+          };
+        } else {
+          return NextResponse.json(
+            { success: false, error: "Unauthorized: Invalid or missing token" },
+            { status: 401 },
+          );
+        }
+      }
+    }
+
     await dbConnect();
     const body = await req.json();
     const {
@@ -207,7 +263,12 @@ export async function PUT(req: Request) {
       updateData.resumeText = resumeText;
       if (resumeText) {
         try {
-          updateData.resumeEmbedding = await generateEmbedding(resumeText);
+          if (forceMock) {
+            console.log("[Candidates PUT] Bypassing live Gemini API because user is mock/unauthenticated. Using deterministic mock embedding.");
+            updateData.resumeEmbedding = getDeterministicMockEmbedding(resumeText);
+          } else {
+            updateData.resumeEmbedding = await generateEmbedding(resumeText);
+          }
         } catch (embErr) {
           console.warn("Failed to generate embedding on PUT:", embErr);
         }

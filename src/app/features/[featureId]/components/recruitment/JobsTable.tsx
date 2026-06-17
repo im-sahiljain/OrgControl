@@ -2,6 +2,9 @@
 
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
+import toast from "react-hot-toast";
 import {
   ArrowDown,
   ArrowRight,
@@ -15,6 +18,7 @@ import {
   MapPin,
   Loader2,
   MoreHorizontal,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +37,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 
 interface JobsTableProps {
   jobs: any[];
@@ -58,6 +68,7 @@ type SortColumn =
   | "type"
   | "status"
   | "applicantCount"
+  | "createdAt"
   | null;
 
 type SortDirection = "asc" | "desc" | null;
@@ -78,10 +89,59 @@ export const JobsTable: React.FC<JobsTableProps> = ({
   handleEditClick,
   handleToggleStatusClick,
 }) => {
-  const [sortColumn, setSortColumn] = useState<SortColumn>(null);
-  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+  const [sortColumn, setSortColumn] = useState<SortColumn>("createdAt");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(20);
+
+  const {
+    data: paginatedData,
+    isLoading: loadingPaginatedJobs,
+    refetch: refetchJobs,
+    isFetching: isFetchingJobs,
+  } = useQuery({
+    queryKey: [
+      "recruitment-jobs",
+      orgId,
+      searchValue,
+      statusFilter,
+      typeFilter,
+      page,
+      rowsPerPage,
+      sortColumn,
+      sortDirection,
+    ],
+    queryFn: async () => {
+      if (!orgId) return { data: [], pagination: { total: 0, pages: 1 } };
+      const params = new URLSearchParams({
+        orgId,
+        all: "true",
+        search: searchValue,
+        page: String(page + 1), // backend is 1-indexed
+        limit: String(rowsPerPage),
+      });
+
+      if (statusFilter && statusFilter !== "all") {
+        params.set("status", statusFilter);
+      }
+
+      if (typeFilter && typeFilter !== "all") {
+        params.set("type", typeFilter);
+      }
+
+      if (sortColumn && sortDirection) {
+        params.set("sortBy", sortColumn);
+        params.set("sortOrder", sortDirection);
+      }
+
+      const res = await axios.get(`/api/jobs?${params.toString()}`);
+      return res.data;
+    },
+    enabled: !!orgId,
+  });
+
+  const displayedJobs = paginatedData?.data || [];
+  const pagination = paginatedData?.pagination || { total: 0, pages: 1 };
 
   const jobTypes = useMemo(
     () =>
@@ -111,16 +171,9 @@ export const JobsTable: React.FC<JobsTableProps> = ({
     });
   }, [jobs, sortColumn, sortDirection]);
 
-  const pageCount = Math.max(1, Math.ceil(sortedJobs.length / rowsPerPage));
-  const currentPage = Math.min(page, pageCount - 1);
-  const paginatedJobs = React.useMemo(
-    () =>
-      sortedJobs.slice(
-        currentPage * rowsPerPage,
-        currentPage * rowsPerPage + rowsPerPage,
-      ),
-    [sortedJobs, currentPage, rowsPerPage],
-  );
+  const pageCount = pagination.pages || 1;
+  const currentPage = page;
+  const paginatedJobs = displayedJobs;
 
   const toggleSort = (column: SortColumn) => {
     if (sortColumn !== column) {
@@ -194,6 +247,27 @@ export const JobsTable: React.FC<JobsTableProps> = ({
           >
             Reset
           </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1 flex items-center cursor-pointer"
+            onClick={() => {
+              refetchJobs().then((result) => {
+                if (result.isError) {
+                  toast.error("Failed to refresh jobs list.");
+                } else {
+                  toast.success("Jobs list refreshed successfully.");
+                }
+              });
+            }}
+            disabled={isFetchingJobs}
+          >
+            <RefreshCw
+              className={`h-3.5 w-3.5 ${isFetchingJobs ? "animate-spin" : ""}`}
+            />
+            Refresh
+          </Button>
         </div>
 
         <div className="text-sm text-muted-foreground">
@@ -204,6 +278,7 @@ export const JobsTable: React.FC<JobsTableProps> = ({
       <Table className="min-w-195">
         <TableHeader className="bg-zinc-50 dark:bg-zinc-950 text-zinc-500 text-xxs uppercase tracking-[0.08em]">
           <TableRow>
+            <TableHead className="w-12 text-center">No.</TableHead>
             <TableHead>
               <button
                 type="button"
@@ -250,19 +325,22 @@ export const JobsTable: React.FC<JobsTableProps> = ({
               </button>
             </TableHead>
             <TableHead>Public Link</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            <TableHead className="text-center">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {loadingJobs ? (
+          {loadingJobs || loadingPaginatedJobs ? (
             <TableRow>
-              <TableCell colSpan={7} className="p-10 text-center">
+              <TableCell colSpan={8} className="p-10 text-center">
                 <Loader2 className="mx-auto h-5 w-5 animate-spin text-blue-600" />
               </TableCell>
             </TableRow>
           ) : sortedJobs.length > 0 ? (
-            paginatedJobs.map((job: any) => (
+            paginatedJobs.map((job: any, index: number) => (
               <TableRow key={job._id}>
+                <TableCell className="text-center font-semibold text-zinc-400 dark:text-zinc-500">
+                  {currentPage * rowsPerPage + index + 1}
+                </TableCell>
                 <TableCell>
                   <div className="font-semibold text-zinc-950 dark:text-zinc-50">
                     {job.title}
@@ -306,9 +384,9 @@ export const JobsTable: React.FC<JobsTableProps> = ({
                     Apply Portal <ArrowRight className="h-3 w-3" />
                   </Link>
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-center">
                   <div className="inline-flex flex-wrap justify-end gap-2">
-                    <Button
+                    {/* <Button
                       variant="outline"
                       size="sm"
                       className="h-8 text-xxs font-semibold px-3"
@@ -338,38 +416,35 @@ export const JobsTable: React.FC<JobsTableProps> = ({
                       onClick={() => handleToggleStatusClick(job)}
                     >
                       {job.status === "active" ? "Deactivate" : "Activate"}
-                    </Button>
-                    <details className="relative inline-block text-left">
-                      <summary className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 [&::-webkit-details-marker]:hidden">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </summary>
-                      <div className="absolute right-0 z-20 mt-2 min-w-48 overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-lg">
+                    </Button> */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger>
                         <button
                           type="button"
-                          className="w-full px-3 py-2 text-left text-sm text-zinc-700 hover:bg-zinc-50"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 cursor-pointer"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
                           onClick={() => {
                             setSelectedJobId(job._id);
                             setActiveTab("candidates");
                           }}
                         >
                           View Pipeline
-                        </button>
-                        <button
-                          type="button"
-                          className="w-full px-3 py-2 text-left text-sm text-zinc-700 hover:bg-zinc-50"
-                          onClick={() => handleEditClick(job)}
-                        >
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEditClick(job)}>
                           Edit
-                        </button>
-                        <button
-                          type="button"
-                          className="w-full px-3 py-2 text-left text-sm text-zinc-700 hover:bg-zinc-50"
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
                           onClick={() => handleToggleStatusClick(job)}
                         >
                           {job.status === "active" ? "Deactivate" : "Activate"}
-                        </button>
-                      </div>
-                    </details>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </TableCell>
               </TableRow>
@@ -377,7 +452,7 @@ export const JobsTable: React.FC<JobsTableProps> = ({
           ) : (
             <TableRow>
               <TableCell
-                colSpan={7}
+                colSpan={8}
                 className="p-8 text-center text-zinc-400 italic"
               >
                 No job postings created.
