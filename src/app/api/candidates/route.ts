@@ -31,14 +31,30 @@ export async function GET(req: Request) {
       return NextResponse.json({ success: true, data: candidate });
     }
 
-    // 2. Bulk List Query (Optimized card views)
+    // 2. Bulk List Query (Optimized table views)
     const query: any = { orgId };
     if (jobId) {
       query.jobId = jobId;
     }
+
     const stage = searchParams.get("stage");
-    if (stage) {
+    if (stage && stage !== "all") {
       query.stage = stage;
+    }
+
+    const isAiScreened = searchParams.get("isAiScreened");
+    if (isAiScreened === "true" || isAiScreened === "false") {
+      query.isAiScreened = isAiScreened === "true";
+    }
+
+    const search = searchParams.get("search")?.trim();
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+        { phone: { $regex: search, $options: "i" } },
+        { skills: { $regex: search, $options: "i" } },
+      ];
     }
 
     const limit = parseInt(searchParams.get("limit") || "50", 10);
@@ -47,7 +63,7 @@ export async function GET(req: Request) {
 
     const candidates = await Candidate.find(query)
       .select(
-        "name email phone skills matchScore stage isAiScreened jobId orgId createdAt resumeUrl",
+        "name email phone skills matchScore stage isAiScreened jobId orgId createdAt resumeUrl summary pros cons interviewQuestions",
       )
       .sort({ createdAt: -1 })
       .skip(skip)

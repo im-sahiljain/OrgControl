@@ -8,7 +8,7 @@ export interface IJobPosting extends Document {
   type: "Full-time" | "Part-time" | "Contract" | "Internship";
   description: string;
   requirements: string[];
-  status: "active" | "archived";
+  status: "active" | "inactive" | "archived";
   createdAt: Date;
   updatedAt: Date;
 }
@@ -28,7 +28,7 @@ const JobPostingSchema: Schema = new Schema<IJobPosting>(
     requirements: { type: [String], default: [] },
     status: {
       type: String,
-      enum: ["active", "archived"],
+      enum: ["active", "inactive", "archived"],
       default: "active",
     },
   },

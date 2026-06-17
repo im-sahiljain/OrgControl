@@ -74,6 +74,12 @@ export function Sidebar({
       roles: ["org_admin", "employee"],
     },
     {
+      name: "Candidates Pool",
+      href: "/features/candidates_pool",
+      icon: Users,
+      roles: ["org_admin", "employee"],
+    },
+    {
       name: "Attendance",
       href: "/attendance",
       icon: Clock,
@@ -123,13 +129,27 @@ export function Sidebar({
   const userRole = user?.role || "employee";
   const userDept = user?.department || "";
   const filteredMainNav = mainNavItems.filter((item) => {
-    // Hide everything except Dashboard and Recruitment in the UI
-    if (item.name !== "Dashboard" && item.name !== "Recruitment") {
+    // Only show the main application shortcuts that are built out.
+    if (
+      item.name !== "Dashboard" &&
+      item.name !== "Recruitment" &&
+      item.name !== "Candidates Pool"
+    ) {
       return false;
     }
     if (!item.roles.includes(userRole)) return false;
-    // Only show "Recruitment" to org_admin or employees in Human Resources department
-    if (item.name === "Recruitment" && userRole !== "org_admin" && userDept !== "Human Resources") {
+    if (
+      item.name === "Recruitment" &&
+      userRole !== "org_admin" &&
+      userDept !== "Human Resources"
+    ) {
+      return false;
+    }
+    if (
+      item.name === "Candidates Pool" &&
+      userRole !== "org_admin" &&
+      userDept !== "Human Resources"
+    ) {
       return false;
     }
     return true;
@@ -141,7 +161,10 @@ export function Sidebar({
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside suppressHydrationWarning className={`fixed inset-y-0 left-0 z-20 border-r border-zinc-200 bg-white/70 backdrop-blur-md dark:border-zinc-800 dark:bg-black/50 hidden md:block ${enableTransition ? "transition-all duration-300" : ""} ${isCollapsed ? "w-20" : "w-64"}`}>
+      <aside
+        suppressHydrationWarning
+        className={`fixed inset-y-0 left-0 z-20 border-r border-zinc-200 bg-white/70 backdrop-blur-md dark:border-zinc-800 dark:bg-black/50 hidden md:block ${enableTransition ? "transition-all duration-300" : ""} ${isCollapsed ? "w-20" : "w-64"}`}
+      >
         {/* Floating Toggle Button */}
         <button
           suppressHydrationWarning
@@ -149,16 +172,26 @@ export function Sidebar({
           className="absolute top-8 -right-3.5 z-30 h-7 w-7 rounded-full border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900 flex items-center justify-center text-zinc-500 hover:text-zinc-850 shadow-sm cursor-pointer"
           title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
         >
-          <ChevronRight className={`h-4 w-4 absolute ${enableTransition ? "transition-all duration-200" : ""} ${isCollapsed ? "opacity-100 scale-100" : "opacity-0 scale-0"}`} />
-          <ChevronLeft className={`h-4 w-4 absolute ${enableTransition ? "transition-all duration-200" : ""} ${isCollapsed ? "opacity-0 scale-0" : "opacity-100 scale-100"}`} />
+          <ChevronRight
+            className={`h-4 w-4 absolute ${enableTransition ? "transition-all duration-200" : ""} ${isCollapsed ? "opacity-100 scale-100" : "opacity-0 scale-0"}`}
+          />
+          <ChevronLeft
+            className={`h-4 w-4 absolute ${enableTransition ? "transition-all duration-200" : ""} ${isCollapsed ? "opacity-0 scale-0" : "opacity-100 scale-100"}`}
+          />
         </button>
 
         <div className="flex h-full flex-col px-4 py-6 relative">
-          <div suppressHydrationWarning className={`flex items-center gap-2 mb-8 px-2 ${isCollapsed ? "justify-center" : ""}`}>
+          <div
+            suppressHydrationWarning
+            className={`flex items-center gap-2 mb-8 px-2 ${isCollapsed ? "justify-center" : ""}`}
+          >
             <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold shrink-0">
               O
             </div>
-            <span suppressHydrationWarning className={`text-xl font-semibold tracking-tight whitespace-nowrap ${enableTransition ? "transition-all duration-300" : ""} ${isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100 w-auto"}`}>
+            <span
+              suppressHydrationWarning
+              className={`text-xl font-semibold tracking-tight whitespace-nowrap ${enableTransition ? "transition-all duration-300" : ""} ${isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100 w-auto"}`}
+            >
               Org Control
             </span>
           </div>
@@ -173,7 +206,9 @@ export function Sidebar({
                   title={isCollapsed ? item.name : undefined}
                   suppressHydrationWarning
                   className={`flex items-center ${enableTransition ? "transition-all duration-300" : ""} ${
-                    isCollapsed ? "justify-center p-2 mx-auto w-10 h-10 rounded-lg" : "gap-3 px-3 py-2 rounded-lg"
+                    isCollapsed
+                      ? "justify-center p-2 mx-auto w-10 h-10 rounded-lg"
+                      : "gap-3 px-3 py-2 rounded-lg"
                   } ${
                     isActive
                       ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-900/50 dark:text-zinc-50"
@@ -183,7 +218,10 @@ export function Sidebar({
                   <item.icon
                     className={`h-5 w-5 shrink-0 ${isActive ? "text-zinc-900 dark:text-zinc-100" : "text-zinc-500 dark:text-zinc-400"}`}
                   />
-                  <span suppressHydrationWarning className={`font-medium text-sm whitespace-nowrap ${enableTransition ? "transition-all duration-300" : ""} ${isCollapsed ? "opacity-0 w-0 overflow-hidden ml-0" : "opacity-100 w-auto ml-3"}`}>
+                  <span
+                    suppressHydrationWarning
+                    className={`font-medium text-sm whitespace-nowrap ${enableTransition ? "transition-all duration-300" : ""} ${isCollapsed ? "opacity-0 w-0 overflow-hidden ml-0" : "opacity-100 w-auto ml-3"}`}
+                  >
                     {item.name}
                   </span>
                 </Link>
@@ -201,7 +239,9 @@ export function Sidebar({
                   title={isCollapsed ? item.name : undefined}
                   suppressHydrationWarning
                   className={`flex items-center ${enableTransition ? "transition-all duration-300" : ""} ${
-                    isCollapsed ? "justify-center p-2 mx-auto w-10 h-10 rounded-lg" : "gap-3 px-3 py-2 rounded-lg"
+                    isCollapsed
+                      ? "justify-center p-2 mx-auto w-10 h-10 rounded-lg"
+                      : "gap-3 px-3 py-2 rounded-lg"
                   } ${
                     isActive
                       ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-900/50 dark:text-zinc-50"
@@ -211,7 +251,10 @@ export function Sidebar({
                   <item.icon
                     className={`h-5 w-5 shrink-0 ${isActive ? "text-zinc-900 dark:text-zinc-100" : "text-zinc-500 dark:text-zinc-400"}`}
                   />
-                  <span suppressHydrationWarning className={`font-medium text-sm whitespace-nowrap ${enableTransition ? "transition-all duration-300" : ""} ${isCollapsed ? "opacity-0 w-0 overflow-hidden ml-0" : "opacity-100 w-auto ml-3"}`}>
+                  <span
+                    suppressHydrationWarning
+                    className={`font-medium text-sm whitespace-nowrap ${enableTransition ? "transition-all duration-300" : ""} ${isCollapsed ? "opacity-0 w-0 overflow-hidden ml-0" : "opacity-100 w-auto ml-3"}`}
+                  >
                     {item.name}
                   </span>
                 </Link>
@@ -225,7 +268,9 @@ export function Sidebar({
       {/* Backdrop */}
       <div
         className={`fixed inset-0 z-30 bg-black/40 backdrop-blur-xs transition-opacity duration-300 md:hidden ${
-          isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+          isOpen
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none"
         }`}
         onClick={onClose}
       />
@@ -250,8 +295,18 @@ export function Sidebar({
               onClick={onClose}
               className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-500 transition-colors"
             >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <svg
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>

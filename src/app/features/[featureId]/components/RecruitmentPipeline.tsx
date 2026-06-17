@@ -15,25 +15,14 @@ import {
   Users,
   Briefcase,
   Plus,
-  MapPin,
-  Clock,
-  Check,
-  X,
   ArrowRight,
-  ShieldCheck,
   Loader2,
   Sparkles,
-  FileText,
-  ChevronRight,
   UserPlus,
-  GripVertical,
-  Search,
-  RefreshCw,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import type { RootState } from "@/app/reduxToolkit/store";
-import { VirtualizedList } from "@/app/components/VirtualizedList";
 import toast from "react-hot-toast";
 import {
   Select,
@@ -44,12 +33,18 @@ import {
 } from "@/components/ui/select";
 import {
   DragDropManager,
-  Draggable,
-  Droppable,
   PointerSensor,
   PointerActivationConstraints,
   Feedback,
 } from "@dnd-kit/dom";
+
+import { KanbanColumn } from "./recruitment/KanbanColumn";
+import { JobsTable } from "./recruitment/JobsTable";
+import { JobPostingForm } from "./recruitment/JobPostingForm";
+import { RagSearch } from "./recruitment/RagSearch";
+import { CandidateDetailsDrawer } from "./recruitment/CandidateDetailsDrawer";
+import { EditJobModal } from "./recruitment/EditJobModal";
+import { ToggleStatusDialog } from "./recruitment/ToggleStatusDialog";
 
 const PIPELINE_STAGES = [
   {
@@ -83,231 +78,6 @@ const PIPELINE_STAGES = [
       "bg-rose-500/10 text-rose-600 border-rose-200 dark:border-rose-900/50",
   },
 ];
-
-interface CandidateCardProps {
-  cand: any;
-  onClick: (cand: any) => void;
-  dndManager: DragDropManager | null;
-  isSelected: boolean;
-  isMoving: boolean;
-  onToggleSelect: (id: string, e: React.MouseEvent) => void;
-}
-
-const CandidateCard = React.memo(
-  ({
-    cand,
-    onClick,
-    dndManager,
-    isSelected,
-    isMoving,
-    onToggleSelect,
-  }: CandidateCardProps) => {
-    const cardRef = useRef<HTMLDivElement>(null);
-
-    // Register this card as a Draggable with the @dnd-kit/dom manager
-    useEffect(() => {
-      const el = cardRef.current;
-      if (!el || !dndManager) return;
-      const draggable = new Draggable(
-        { id: cand._id, element: el },
-        dndManager,
-      );
-      return () => draggable.destroy();
-    }, [cand._id, dndManager]);
-
-    return (
-      <div
-        ref={cardRef}
-        className={`relative p-3 h-24 bg-white dark:bg-zinc-900 border rounded-lg shadow-sm transition-all space-y-2 group overflow-hidden select-none ${
-          isSelected
-            ? "border-blue-500 ring-2 ring-blue-200 dark:ring-blue-800/50 cursor-grab"
-            : "border-zinc-150 dark:border-zinc-850 hover:border-blue-400 cursor-grab"
-        }`}
-        style={{ boxSizing: "border-box" }}
-      >
-        {/* Moving overlay — shown while API call is in flight */}
-        {isMoving && (
-          <div className="absolute inset-0 z-30 rounded-lg bg-white/75 dark:bg-zinc-900/75 backdrop-blur-[2px] flex items-center justify-center gap-1.5">
-            <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" />
-            <span className="text-[10px] font-semibold text-blue-600">
-              Moving…
-            </span>
-          </div>
-        )}
-
-        {/* Multi-select checkbox — visible on hover or when selected */}
-        <div
-          className={`absolute top-1.5 left-1.5 z-10 transition-opacity duration-150 ${
-            isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-          }`}
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleSelect(cand._id, e);
-          }}
-        >
-          <div
-            className={`h-4 w-4 rounded border-2 flex items-center justify-center transition-colors cursor-pointer ${
-              isSelected
-                ? "bg-blue-600 border-blue-600"
-                : "bg-white dark:bg-zinc-900 border-zinc-300 dark:border-zinc-600 hover:border-blue-400"
-            }`}
-          >
-            {isSelected && (
-              <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />
-            )}
-          </div>
-        </div>
-
-        {/* Drag handle indicator */}
-        <div className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-40 transition-opacity">
-          <GripVertical className="h-3.5 w-3.5 text-zinc-400" />
-        </div>
-
-        <div className="flex justify-between items-start gap-1 pl-5">
-          <div className="flex items-center gap-1">
-            <h4 className="font-bold text-xs text-zinc-900 dark:text-zinc-55 truncate group-hover:text-blue-600 transition-colors">
-              {cand.name}
-            </h4>
-            <button
-              onClick={() => onClick(cand)}
-              className="h-4 w-4 rounded-full bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 flex items-center justify-center text-[8px] font-bold hover:cursor-pointer hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors shrink-0"
-            >
-              i
-            </button>
-          </div>
-          <span
-            className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded mr-4 ${
-              cand.matchScore >= 85
-                ? "bg-emerald-50 text-emerald-600"
-                : cand.matchScore >= 75
-                  ? "bg-purple-50 text-purple-600"
-                  : "bg-zinc-50 text-zinc-500"
-            }`}
-          >
-            {cand.matchScore}%
-          </span>
-        </div>
-
-        <p className="text-[10px] text-zinc-400 font-semibold truncate pl-5">
-          {cand.email}
-        </p>
-
-        <div className="flex gap-1 pl-5 items-center overflow-hidden">
-          {cand.skills?.slice(0, 3).map((sk: string, idx: number) => (
-            <span
-              key={sk}
-              className="text-[9px] px-1.5 py-0.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800/80 rounded text-zinc-500 shrink-0"
-            >
-              {sk}
-            </span>
-          ))}
-          {cand.skills && cand.skills.length > 3 && (
-            <span className="text-[9px] text-zinc-400 font-bold shrink-0">
-              +{cand.skills.length - 3}
-            </span>
-          )}
-        </div>
-      </div>
-    );
-  },
-);
-
-CandidateCard.displayName = "CandidateCard";
-
-// ── Droppable Kanban Column ──────────────────────────────────────────────────
-interface KanbanColumnProps {
-  stageId: string;
-  stageName: string;
-  stageColor: string;
-  totalCount: number;
-  isLoading: boolean;
-  isFetchingNextPage: boolean;
-  isDragOver: boolean;
-  candidates: any[];
-  dndManager: DragDropManager | null;
-  selectedIds: Set<string>;
-  movingIds: Set<string>;
-  onToggleSelect: (id: string, e: React.MouseEvent) => void;
-  onCardClick: (cand: any) => void;
-  onScrollEnd: () => void;
-}
-
-const KanbanColumn = React.memo(function KanbanColumn({
-  stageId,
-  stageName,
-  stageColor,
-  totalCount,
-  isLoading,
-  isFetchingNextPage,
-  isDragOver,
-  candidates,
-  dndManager,
-  selectedIds,
-  movingIds,
-  onToggleSelect,
-  onCardClick,
-  onScrollEnd,
-}: KanbanColumnProps) {
-  const colRef = useRef<HTMLDivElement>(null);
-
-  // Register this column as a Droppable
-  useEffect(() => {
-    const el = colRef.current;
-    if (!el || !dndManager) return;
-    const droppable = new Droppable({ id: stageId, element: el }, dndManager);
-    return () => droppable.destroy();
-  }, [stageId, dndManager]);
-
-  return (
-    <div
-      ref={colRef}
-      className={`bg-zinc-50 dark:bg-zinc-950 border rounded-xl overflow-hidden flex flex-col h-[70vh] w-[280px] md:w-full shrink-0 snap-align-start transition-all duration-150 ${
-        isDragOver
-          ? "border-blue-400 ring-2 ring-blue-300/40 dark:ring-blue-500/30 scale-[1.01] shadow-lg shadow-blue-100 dark:shadow-blue-900/20"
-          : "border-zinc-150 dark:border-zinc-850/50"
-      }`}
-    >
-      <div
-        className={`px-3 py-2.5 border-b border-zinc-200 dark:border-zinc-850 flex justify-between items-center text-xs font-bold ${stageColor}`}
-      >
-        <span>{stageName}</span>
-        <span className="bg-white/90 dark:bg-zinc-900 px-2 py-0.5 rounded-full border border-current text-[10px]">
-          {totalCount}
-        </span>
-      </div>
-
-      <div className="p-1 flex-1 min-h-[150px] overflow-hidden flex flex-col">
-        <VirtualizedList
-          items={candidates}
-          itemHeight={104}
-          className="flex-1 w-full"
-          onScrollEnd={onScrollEnd}
-          renderItem={(cand: any) => (
-            <CandidateCard
-              cand={cand}
-              onClick={onCardClick}
-              dndManager={dndManager}
-              isSelected={selectedIds.has(cand._id)}
-              isMoving={movingIds.has(cand._id)}
-              onToggleSelect={onToggleSelect}
-            />
-          )}
-          emptyPlaceholder={
-            <div className="text-center py-8 text-[10px] text-zinc-400 italic">
-              {isLoading ? "Loading..." : "No candidates here"}
-            </div>
-          }
-        />
-        {isFetchingNextPage && (
-          <div className="py-1.5 flex justify-center text-zinc-400 text-[9px] font-bold gap-1 items-center bg-zinc-100 dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800">
-            <Loader2 className="h-3 w-3 animate-spin text-blue-600" />
-            Loading more...
-          </div>
-        )}
-      </div>
-    </div>
-  );
-});
 
 export default function RecruitmentPipeline({ feature }: { feature: any }) {
   const queryClient = useQueryClient();
@@ -378,6 +148,56 @@ export default function RecruitmentPipeline({ feature }: { feature: any }) {
   const [jobType, setJobType] = useState("Full-time");
   const [jobDesc, setJobDesc] = useState("");
   const [jobReqs, setJobReqs] = useState("");
+
+  // Jobs list filter/search state
+  const [jobSearchInput, setJobSearchInput] = useState("");
+  const [jobSearch, setJobSearch] = useState("");
+  const [jobStatusFilter, setJobStatusFilter] = useState("all");
+  const [jobTypeFilter, setJobTypeFilter] = useState("all");
+
+  // Edit Job state
+  const [editingJob, setEditingJob] = useState<any | null>(null);
+  const [editJobTitle, setEditJobTitle] = useState("");
+  const [editJobDept, setEditJobDept] = useState("Engineering");
+  const [editJobLoc, setEditJobLoc] = useState("Remote");
+  const [editJobType, setEditJobType] = useState("Full-time");
+  const [editJobDesc, setEditJobDesc] = useState("");
+  const [editJobReqs, setEditJobReqs] = useState("");
+
+  // Toggle Job state
+  const [togglingJob, setTogglingJob] = useState<any | null>(null);
+
+  useEffect(() => {
+    if (editingJob) {
+      setEditJobTitle(editingJob.title || "");
+      setEditJobDept(editingJob.department || "Engineering");
+      setEditJobLoc(editingJob.location || "Remote");
+      setEditJobType(editingJob.type || "Full-time");
+      setEditJobDesc(editingJob.description || "");
+      const editingRequirements = Array.isArray(editingJob.requirements)
+        ? editingJob.requirements
+        : typeof editingJob.requirements === "string"
+          ? [editingJob.requirements]
+          : [];
+      setEditJobReqs(editingRequirements.join("\n"));
+    }
+  }, [editingJob]);
+
+  const handleEditClick = (job: any) => {
+    if (user?.isSandbox) {
+      toast.error("Operation not performable in Mock");
+      return;
+    }
+    setEditingJob(job);
+  };
+
+  const handleToggleStatusClick = (job: any) => {
+    if (user?.isSandbox) {
+      toast.error("Operation not performable in Mock");
+      return;
+    }
+    setTogglingJob(job);
+  };
 
   const runRagSearch = async (query: string = "") => {
     if (!selectedJobId) return;
@@ -582,14 +402,42 @@ export default function RecruitmentPipeline({ feature }: { feature: any }) {
 
   // 1. Fetch Job Postings
   const { data: jobs, isLoading: loadingJobs } = useQuery({
-    queryKey: ["recruitment-jobs", orgId],
+    queryKey: [
+      "recruitment-jobs",
+      orgId,
+      jobSearch,
+      jobStatusFilter,
+      jobTypeFilter,
+    ],
     queryFn: async () => {
       if (!orgId) return [];
-      const res = await axios.get(`/api/jobs?orgId=${orgId}`);
+      const params = new URLSearchParams({
+        orgId,
+        all: "true",
+        search: jobSearch,
+      });
+
+      if (jobStatusFilter && jobStatusFilter !== "all") {
+        params.set("status", jobStatusFilter);
+      }
+
+      if (jobTypeFilter && jobTypeFilter !== "all") {
+        params.set("type", jobTypeFilter);
+      }
+
+      const res = await axios.get(`/api/jobs?${params.toString()}`);
       return res.data.data || [];
     },
     enabled: !!orgId,
   });
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setJobSearch(jobSearchInput.trim());
+    }, 300);
+
+    return () => clearTimeout(handler);
+  }, [jobSearchInput]);
 
   // Automatically select first job
   useEffect(() => {
@@ -699,6 +547,27 @@ export default function RecruitmentPipeline({ feature }: { feature: any }) {
     },
     onError: (err: any) => {
       toast.error(err.response?.data?.error || "Failed to create job posting.");
+    },
+  });
+
+  // Update Job Posting Mutation
+  const updateJobMutation = useMutation({
+    mutationFn: async ({
+      jobId,
+      updatedFields,
+    }: {
+      jobId: string;
+      updatedFields: any;
+    }) => {
+      const res = await axios.put(`/api/jobs/${jobId}`, updatedFields);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["recruitment-jobs"] });
+      toast.success("Job posting updated successfully!");
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.error || "Failed to update job posting.");
     },
   });
 
@@ -841,6 +710,10 @@ export default function RecruitmentPipeline({ feature }: { feature: any }) {
 
   const handlePostJob = (e: React.FormEvent) => {
     e.preventDefault();
+    if (user?.isSandbox) {
+      toast.error("Operation not performable in Mock");
+      return;
+    }
     if (!jobTitle || !jobDesc || !jobLoc) {
       toast.error("Please fill all mandatory fields.");
       return;
@@ -1002,7 +875,6 @@ export default function RecruitmentPipeline({ feature }: { feature: any }) {
           })}
         </div>
       </div>
-
       {/* Candidates Board View */}
       {activeTab === "candidates" && (
         <div className="space-y-6">
@@ -1026,6 +898,7 @@ export default function RecruitmentPipeline({ feature }: { feature: any }) {
                   {jobs.map((job: any) => (
                     <SelectItem key={job._id} value={job._id}>
                       {job.title} ({job.location})
+                      {job.status !== "active" && " (Inactive)"}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -1121,846 +994,106 @@ export default function RecruitmentPipeline({ feature }: { feature: any }) {
             </div>
           )}
         </div>
-      )}
-
+      )}{" "}
       {/* Active Postings Tab */}
       {activeTab === "jobs" && (
-        <div className="overflow-x-auto border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm w-full">
-          <div className="min-w-[650px] bg-white dark:bg-zinc-900 text-xs overflow-hidden">
-            <div className="bg-zinc-50 dark:bg-zinc-950 p-3 border-b border-zinc-150 dark:border-zinc-850 font-bold text-zinc-500 flex justify-between">
-              <span className="w-1/3">Job Title / Department</span>
-              <span>Location</span>
-              <span>Type</span>
-              <span>Public Link</span>
-              <span className="text-right">Action</span>
-            </div>
-
-            {loadingJobs ? (
-              <div className="p-10 flex justify-center">
-                <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
-              </div>
-            ) : jobs && jobs.length > 0 ? (
-              jobs.map((job: any) => (
-                <div
-                  key={job._id}
-                  className="p-3.5 bg-white dark:bg-zinc-900 flex justify-between items-center border-b border-zinc-100 dark:border-zinc-850 last:border-b-0 hover:bg-zinc-50/50 dark:hover:bg-zinc-950/20"
-                >
-                  <div className="w-1/3">
-                    <span className="font-bold block text-zinc-800 dark:text-zinc-200 text-sm">
-                      {job.title}
-                    </span>
-                    <span className="text-xxs text-zinc-400 block mt-0.5 font-semibold uppercase tracking-wider">
-                      {job.department}
-                    </span>
-                  </div>
-                  <div className="text-zinc-550 flex items-center gap-1">
-                    <MapPin className="h-3.5 w-3.5" />
-                    {job.location}
-                  </div>
-                  <div className="text-zinc-550 flex items-center gap-1">
-                    <Clock className="h-3.5 w-3.5" />
-                    {job.type}
-                  </div>
-                  <div>
-                    <Link
-                      href={`/${orgId}/${job._id}/application`}
-                      target="_blank"
-                      className="text-blue-600 font-bold hover:underline flex items-center gap-0.5"
-                    >
-                      Apply Portal <ArrowRight className="h-3 w-3" />
-                    </Link>
-                  </div>
-                  <div className="text-right">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 text-xxs font-bold"
-                      onClick={() => {
-                        setSelectedJobId(job._id);
-                        setActiveTab("candidates");
-                      }}
-                    >
-                      View Pipeline
-                    </Button>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="p-8 text-center text-zinc-400 italic">
-                No job postings created.
-              </div>
-            )}
-          </div>
-        </div>
+        <JobsTable
+          jobs={jobs}
+          loadingJobs={loadingJobs}
+          orgId={orgId || ""}
+          searchValue={jobSearchInput}
+          onSearchChange={setJobSearchInput}
+          statusFilter={jobStatusFilter}
+          onStatusChange={setJobStatusFilter}
+          typeFilter={jobTypeFilter}
+          onTypeChange={setJobTypeFilter}
+          onResetFilters={() => {
+            setJobSearchInput("");
+            setJobSearch("");
+            setJobStatusFilter("all");
+            setJobTypeFilter("all");
+          }}
+          setSelectedJobId={setSelectedJobId}
+          setActiveTab={setActiveTab}
+          handleEditClick={handleEditClick}
+          handleToggleStatusClick={handleToggleStatusClick}
+        />
       )}
-
       {/* Create Job Posting Tab */}
       {activeTab === "post-job" && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start w-full">
-          {/* Form: Left Column (7 cols) */}
-          <form
-            onSubmit={handlePostJob}
-            className="lg:col-span-7 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm space-y-4"
-          >
-            <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-50 border-b border-zinc-100 dark:border-zinc-850 pb-3">
-              Draft a New Job Posting
-            </h3>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5 sm:col-span-2">
-                <label className="text-xs font-semibold text-zinc-500">
-                  Job Title <span className="text-red-500">*</span>
-                </label>
-                <Input
-                  type="text"
-                  placeholder="Senior Fullstack Developer (Next.js / Node)"
-                  value={jobTitle}
-                  onChange={(e) => setJobTitle(e.target.value)}
-                  className="focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500"
-                  required
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-zinc-500">
-                  Department
-                </label>
-                <Select value={jobDept} onValueChange={setJobDept}>
-                  <SelectTrigger className="w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 text-zinc-800 dark:text-zinc-100 h-9 font-semibold">
-                    <SelectValue placeholder="Select Department" />
-                  </SelectTrigger>
-                  <SelectContent
-                    position="popper"
-                    align="start"
-                    className="w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-2rem)]"
-                  >
-                    <SelectItem value="Engineering">Engineering</SelectItem>
-                    <SelectItem value="Human Resources">
-                      Human Resources
-                    </SelectItem>
-                    <SelectItem value="Sales">Sales</SelectItem>
-                    <SelectItem value="Finance">Finance</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-zinc-500">
-                  Job Location <span className="text-red-500">*</span>
-                </label>
-                <Input
-                  type="text"
-                  placeholder="Remote, Mumbai, Bengaluru"
-                  value={jobLoc}
-                  onChange={(e) => setJobLoc(e.target.value)}
-                  className="focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:border-blue-500"
-                  required
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-zinc-500">
-                  Employment Type
-                </label>
-                <Select value={jobType} onValueChange={setJobType}>
-                  <SelectTrigger className="w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 text-zinc-800 dark:text-zinc-100 h-9 font-semibold">
-                    <SelectValue placeholder="Select Employment Type" />
-                  </SelectTrigger>
-                  <SelectContent
-                    position="popper"
-                    align="start"
-                    className="w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-2rem)]"
-                  >
-                    <SelectItem value="Full-time">Full-time</SelectItem>
-                    <SelectItem value="Part-time">Part-time</SelectItem>
-                    <SelectItem value="Contract">Contract</SelectItem>
-                    <SelectItem value="Internship">Internship</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-zinc-500">
-                Job Description <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                placeholder="Provide a description of responsibilities, company mission, and core team stack."
-                rows={4}
-                value={jobDesc}
-                onChange={(e) => setJobDesc(e.target.value)}
-                className="w-full rounded-lg border border-zinc-200 dark:border-zinc-850 bg-white dark:bg-zinc-950 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 text-zinc-800 dark:text-zinc-100"
-                required
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-zinc-500">
-                Qualifications & Requirements (One per line)
-              </label>
-              <textarea
-                placeholder="5+ years React production experience&#10;Proficiency in TypeScript type mappings&#10;Familiarity with Mongoose and compound indices"
-                rows={3}
-                value={jobReqs}
-                onChange={(e) => setJobReqs(e.target.value)}
-                className="w-full rounded-lg border border-zinc-200 dark:border-zinc-850 bg-white dark:bg-zinc-950 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 text-zinc-800 dark:text-zinc-100"
-              />
-            </div>
-
-            <div className="flex justify-end pt-3 border-t border-zinc-100 dark:border-zinc-850">
-              <Button
-                type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold cursor-pointer"
-                disabled={createJobMutation.isPending}
-              >
-                {createJobMutation.isPending
-                  ? "Creating Posting..."
-                  : "Publish Job Posting"}
-              </Button>
-            </div>
-          </form>
-
-          {/* Preview: Right Column (5 cols) */}
-          <div className="lg:col-span-5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm space-y-4 lg:sticky lg:top-6">
-            <div className="flex justify-between items-center border-b border-zinc-100 dark:border-zinc-800 pb-3">
-              <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
-                Live Public Page Preview
-              </h3>
-              <span className="text-[9px] font-bold px-2 py-0.5 bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 rounded-full border border-blue-100 dark:border-blue-900/50">
-                Careers Portal Draft
-              </span>
-            </div>
-
-            <div className="space-y-5 text-xs">
-              <div className="space-y-2.5">
-                <span className="px-2 py-0.5 text-[9px] font-extrabold uppercase bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 rounded-md border border-blue-100/50 dark:border-blue-900/30 w-fit block">
-                  {jobDept || "Department"}
-                </span>
-                <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-55 leading-snug">
-                  {jobTitle || "Untitled Job Posting (Draft)"}
-                </h1>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-zinc-500 font-semibold">
-                  <span className="flex items-center gap-1">
-                    <MapPin className="h-3.5 w-3.5 text-zinc-400 shrink-0" />{" "}
-                    {jobLoc || "Remote"}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Clock className="h-3.5 w-3.5 text-zinc-400 shrink-0" />{" "}
-                    {jobType || "Full-time"}
-                  </span>
-                </div>
-              </div>
-
-              <div className="border-t border-zinc-100 dark:border-zinc-800 pt-4 space-y-2">
-                <h3 className="font-bold text-[10px] text-zinc-800 dark:text-zinc-200 uppercase tracking-wider">
-                  Position Description
-                </h3>
-                <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed whitespace-pre-wrap min-h-[60px]">
-                  {jobDesc ||
-                    "Job description details, responsibilities, and team info will display here in real-time."}
-                </p>
-              </div>
-
-              <div className="border-t border-zinc-100 dark:border-zinc-800 pt-4 space-y-2">
-                <h3 className="font-bold text-[10px] text-zinc-800 dark:text-zinc-200 uppercase tracking-wider">
-                  Requirements & Qualifications
-                </h3>
-                {jobReqs.trim() ? (
-                  <ul className="list-disc pl-4 space-y-1.5 text-xs text-zinc-550 dark:text-zinc-450">
-                    {jobReqs.split("\n").map(
-                      (req, idx) =>
-                        req.trim() && (
-                          <li key={idx} className="leading-relaxed">
-                            {req.trim()}
-                          </li>
-                        ),
-                    )}
-                  </ul>
-                ) : (
-                  <p className="text-xs text-zinc-400 italic">
-                    Requirements specified in the form will appear as a list
-                    here.
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+        <JobPostingForm
+          jobTitle={jobTitle}
+          setJobTitle={setJobTitle}
+          jobDept={jobDept}
+          setJobDept={setJobDept}
+          jobLoc={jobLoc}
+          setJobLoc={setJobLoc}
+          jobType={jobType}
+          setJobType={setJobType}
+          jobDesc={jobDesc}
+          setJobDesc={setJobDesc}
+          jobReqs={jobReqs}
+          setJobReqs={setJobReqs}
+          handlePostJob={handlePostJob}
+          isPending={createJobMutation.isPending}
+        />
       )}
-
       {/* RAG Vector Search View */}
       {activeTab === "rag-search" && (
-        <div className="space-y-6">
-          {/* Job selection dropdown */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-4 rounded-xl shadow-sm">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-              <span className="text-xs font-bold text-zinc-400 whitespace-nowrap">
-                Select Job Post:
-              </span>
-              {loadingJobs ? (
-                <Loader2 className="h-4 w-4 animate-spin text-zinc-500" />
-              ) : jobs && jobs.length > 0 ? (
-                <Select value={selectedJobId} onValueChange={setSelectedJobId}>
-                  <SelectTrigger className="px-3 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-900 text-xs focus:outline-none font-bold focus:ring-1 focus:ring-blue-500 text-zinc-850 dark:text-zinc-100 max-w-full">
-                    <SelectValue placeholder="Select Job" />
-                  </SelectTrigger>
-                  <SelectContent
-                    position="popper"
-                    align="start"
-                    className="w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-2rem)]"
-                  >
-                    {jobs.map((job: any) => (
-                      <SelectItem key={job._id} value={job._id}>
-                        {job.title} ({job.location})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <span className="text-xs text-zinc-400 italic">
-                  No job postings created yet.
-                </span>
-              )}
-            </div>
-
-            {selectedJobId && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 text-xxs font-bold gap-1 flex items-center bg-violet-50 hover:bg-violet-100 dark:bg-violet-950/20 text-violet-650 hover:text-violet-750 dark:text-violet-400 border-violet-100/50 dark:border-violet-900/50"
-                onClick={handleBatchScreen}
-                disabled={batchScreening}
-              >
-                {batchScreening ? (
-                  <>
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    Screening {batchProgress}/{batchTotal} ({batchCurrentName})
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-3.5 w-3.5" />
-                    Auto-Screen Unscreened Candidates
-                  </>
-                )}
-              </Button>
-            )}
-          </div>
-
-          {/* Batch progress display panel */}
-          {batchScreening && (
-            <div className="p-4 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 rounded-xl space-y-2 animate-pulse">
-              <div className="flex justify-between text-xxs font-bold text-zinc-500">
-                <span>AI Screening Pipeline Queue...</span>
-                <span>
-                  {batchProgress} of {batchTotal} candidates (
-                  {Math.round((batchProgress / batchTotal) * 100)}%)
-                </span>
-              </div>
-              <div className="w-full bg-zinc-205 dark:bg-zinc-800 h-2 rounded-full overflow-hidden">
-                <div
-                  className="bg-violet-600 h-full rounded-full transition-all duration-300"
-                  style={{ width: `${(batchProgress / batchTotal) * 100}%` }}
-                />
-              </div>
-              <p className="text-[10px] text-zinc-400 italic">
-                Processing resume text and generating vector embeddings for:{" "}
-                <strong className="text-zinc-650 dark:text-zinc-300">
-                  {batchCurrentName}
-                </strong>
-              </p>
-            </div>
-          )}
-
-          {/* RAG Query Controls */}
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-sm space-y-4">
-            <div className="space-y-1">
-              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-55 flex items-center gap-1.5">
-                <Sparkles className="h-4.5 w-4.5 text-violet-600 animate-pulse" />
-                Semantic RAG Profile Search
-              </h3>
-              <p className="text-xxs text-zinc-505 leading-relaxed">
-                Describe the specific candidate profile, skills, or background
-                you want to find. The Vector Database calculates semantic
-                matching values against resume text and coordinates, sorting
-                results by score.
-              </p>
-            </div>
-
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-400" />
-                <Input
-                  placeholder="e.g. Senior Frontend engineer with strong knowledge of state management, Next.js, and Redis caching"
-                  value={ragSearchQuery}
-                  onChange={(e) => setRagSearchQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") runRagSearch(ragSearchQuery);
-                  }}
-                  className="pl-9 h-9 text-xs focus:ring-violet-500 focus:border-violet-500 font-medium"
-                />
-              </div>
-              <Button
-                size="sm"
-                className="bg-violet-600 hover:bg-violet-750 text-white font-bold h-9 px-4 text-xs shrink-0"
-                onClick={() => runRagSearch(ragSearchQuery)}
-                disabled={searchingRag || !selectedJobId}
-              >
-                {searchingRag ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  "Search Pool"
-                )}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-9 px-3 text-xs gap-1 flex items-center border-zinc-250 hover:bg-zinc-50 dark:hover:bg-zinc-850"
-                onClick={() => {
-                  setRagSearchQuery("");
-                  runRagSearch("");
-                }}
-                disabled={searchingRag || !selectedJobId}
-              >
-                <RefreshCw className="h-3.5 w-3.5" />
-                Reset (JD Match)
-              </Button>
-            </div>
-
-            {searchMethod && (
-              <div className="flex items-center gap-1.5 text-[10px] text-zinc-400 font-bold">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                Search Mode:{" "}
-                <span className="text-zinc-550 dark:text-zinc-300 uppercase">
-                  {searchMethod === "vectorSearch"
-                    ? "MongoDB Atlas Vector Search"
-                    : "Local Cosine Similarity Fallback"}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Results list */}
-          <div className="space-y-4">
-            <h4 className="text-xs font-bold text-zinc-450 block uppercase tracking-wider">
-              Matched Candidates ({ragResults?.length || 0})
-            </h4>
-
-            {searchingRag ? (
-              <div className="py-20 flex flex-col items-center justify-center space-y-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm">
-                <Loader2 className="h-8 w-8 animate-spin text-violet-600" />
-                <span className="text-xs font-bold text-zinc-505">
-                  Performing semantic vector similarity matches...
-                </span>
-              </div>
-            ) : searchError ? (
-              <div className="p-6 text-center text-xs font-bold text-rose-500 bg-rose-50/50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900 rounded-xl">
-                {searchError}
-              </div>
-            ) : ragResults && ragResults.length > 0 ? (
-              <div className="grid grid-cols-1 gap-4">
-                {ragResults.map((cand) => {
-                  return (
-                    <div
-                      key={cand._id}
-                      className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col md:flex-row justify-between gap-6"
-                    >
-                      {/* Left: Info */}
-                      <div className="space-y-3 flex-1 overflow-hidden">
-                        <div className="flex items-center gap-3 flex-wrap">
-                          <button
-                            onClick={() => setSelectedCandidateId(cand._id)}
-                            className="font-bold text-sm text-zinc-900 dark:text-zinc-50 hover:text-blue-600 dark:hover:text-blue-450 hover:underline text-left truncate cursor-pointer"
-                          >
-                            {cand.name}
-                          </button>
-
-                          <span
-                            className={`text-[9px] font-extrabold px-2 py-0.5 rounded capitalize ${
-                              cand.stage === "offered"
-                                ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
-                                : cand.stage === "rejected"
-                                  ? "bg-rose-50 text-rose-600 border border-rose-100"
-                                  : cand.stage === "interviewing"
-                                    ? "bg-amber-50 text-amber-600 border border-amber-100"
-                                    : "bg-blue-50 text-blue-600 border border-blue-100"
-                            }`}
-                          >
-                            {cand.stage}
-                          </span>
-                        </div>
-
-                        <div className="text-xxs text-zinc-400 space-x-3 font-semibold">
-                          <span>{cand.email}</span>
-                          <span>•</span>
-                          <span>{cand.phone || "No Phone"}</span>
-                          {cand.resumeUrl && (
-                            <>
-                              <span>•</span>
-                              <a
-                                href={cand.resumeUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-blue-600 hover:underline inline-flex items-center gap-0.5 font-bold"
-                              >
-                                <FileText className="h-3 w-3" /> View Resume
-                              </a>
-                            </>
-                          )}
-                        </div>
-
-                        {cand.summary && (
-                          <p className="text-xs text-zinc-505 dark:text-zinc-450 leading-relaxed line-clamp-2">
-                            {cand.summary}
-                          </p>
-                        )}
-
-                        {cand.skills && cand.skills.length > 0 && (
-                          <div className="flex flex-wrap gap-1">
-                            {cand.skills.slice(0, 6).map((sk: string) => (
-                              <span
-                                key={sk}
-                                className="px-2 py-0.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-150 dark:border-zinc-850 rounded text-[10px] font-bold text-zinc-500"
-                              >
-                                {sk}
-                              </span>
-                            ))}
-                            {cand.skills.length > 6 && (
-                              <span className="text-[9px] text-zinc-400 font-bold self-center">
-                                +{cand.skills.length - 6} more
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Right: Score & Actions */}
-                      <div className="flex flex-row md:flex-col justify-between items-center md:items-end gap-4 shrink-0 min-w-[150px]">
-                        <div className="flex items-center gap-2">
-                          <div className="text-right">
-                            <span className="text-xxs text-zinc-400 font-bold block uppercase tracking-wider">
-                              Similarity Match
-                            </span>
-                            <span
-                              className={`text-base font-extrabold block mt-0.5 ${
-                                cand.matchPercentage >= 80
-                                  ? "text-emerald-600"
-                                  : cand.matchPercentage >= 70
-                                    ? "text-purple-600"
-                                    : "text-zinc-500"
-                              }`}
-                            >
-                              {cand.matchPercentage}%
-                            </span>
-                          </div>
-
-                          <div className="h-9 w-9 rounded-full border-2 border-zinc-100 dark:border-zinc-800 flex items-center justify-center font-bold text-xs bg-zinc-50 dark:bg-zinc-950">
-                            {cand.matchPercentage}
-                          </div>
-                        </div>
-
-                        <div className="flex gap-2">
-                          {cand.stage !== "interviewing" &&
-                            cand.stage !== "offered" && (
-                              <Button
-                                size="sm"
-                                className="h-8 text-[10px] font-bold bg-blue-600 hover:bg-blue-750 text-white"
-                                onClick={() =>
-                                  handleUpdateStageFromRag(
-                                    cand._id,
-                                    "interviewing",
-                                  )
-                                }
-                              >
-                                Shortlist
-                              </Button>
-                            )}
-                          {cand.stage !== "rejected" && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 text-[10px] font-bold border-zinc-250 text-rose-600 hover:text-rose-700 hover:bg-rose-50/30"
-                              onClick={() =>
-                                handleUpdateStageFromRag(cand._id, "rejected")
-                              }
-                            >
-                              Reject
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="py-16 text-center bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm text-zinc-450 italic text-xs space-y-2 flex flex-col items-center">
-                <p>No candidates processed for vector matching yet.</p>
-                <p className="text-[10px] font-normal not-italic max-w-sm text-zinc-500">
-                  Ensure candidate resumes are AI-screened to generate their
-                  vector embeddings, then enter a search query above.
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
+        <RagSearch
+          jobs={jobs}
+          loadingJobs={loadingJobs}
+          selectedJobId={selectedJobId}
+          setSelectedJobId={setSelectedJobId}
+          batchScreening={batchScreening}
+          batchProgress={batchProgress}
+          batchTotal={batchTotal}
+          batchCurrentName={batchCurrentName}
+          handleBatchScreen={handleBatchScreen}
+          ragSearchQuery={ragSearchQuery}
+          setRagSearchQuery={setRagSearchQuery}
+          runRagSearch={runRagSearch}
+          searchingRag={searchingRag}
+          searchError={searchError}
+          searchMethod={searchMethod}
+          ragResults={ragResults}
+          setSelectedCandidateId={setSelectedCandidateId}
+          handleUpdateStageFromRag={handleUpdateStageFromRag}
+        />
       )}
-
       {/* Candidate Detail AI Insights Panel */}
-      {/* Candidate Detail AI Insights Panel */}
-      {selectedCandidateId && (
-        <motion.div
-          className="fixed inset-0 bg-black/50 z-50 flex justify-end"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-        >
-          <motion.div
-            className="bg-white dark:bg-zinc-900 border-l border-zinc-200 dark:border-zinc-800 w-full max-w-lg flex flex-col h-full overflow-hidden shadow-2xl"
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          >
-            {/* Drawer Header */}
-            <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex justify-between items-center bg-zinc-50/50 dark:bg-zinc-950/20">
-              <div className="space-y-1 overflow-hidden">
-                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
-                  Candidate Profile
-                </span>
-                {loadingDetails ? (
-                  <div className="h-5 bg-zinc-200 dark:bg-zinc-800 rounded w-32 animate-pulse mt-1" />
-                ) : (
-                  <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-55 truncate">
-                    {fullCandidate?.name}
-                  </h3>
-                )}
-                {loadingDetails ? (
-                  <div className="h-3 bg-zinc-200 dark:bg-zinc-800 rounded w-48 animate-pulse mt-1.5" />
-                ) : (
-                  <span className="text-xxs text-zinc-400 block font-semibold truncate">
-                    {fullCandidate?.email} | {fullCandidate?.phone}
-                  </span>
-                )}
-              </div>
-              <button
-                onClick={() => setSelectedCandidateId(null)}
-                className="p-2 hover:bg-zinc-200 dark:hover:bg-zinc-850 rounded-full text-zinc-500 transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Drawer Content */}
-            {loadingDetails ? (
-              <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-3">
-                <Loader2 className="h-7 w-7 animate-spin text-blue-600" />
-                <span className="text-xs font-bold text-zinc-500">
-                  Retrieving AI insights and screening profile...
-                </span>
-              </div>
-            ) : fullCandidate ? (
-              <>
-                <div className="p-6 overflow-y-auto flex-1 space-y-6 text-xs">
-                  {/* Score & Resume download */}
-                  <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950/30 border border-zinc-150 dark:border-zinc-850/80 rounded-xl gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="h-12 w-12 rounded-full border-4 border-blue-500/20 flex items-center justify-center font-bold text-sm text-blue-600 dark:text-blue-400 bg-white dark:bg-zinc-900">
-                        {fullCandidate.matchScore}%
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-zinc-800 dark:text-zinc-100">
-                          AI Match Score
-                        </h4>
-                        <span className="text-[10px] text-zinc-400 block mt-0.5">
-                          Scored against job description
-                        </span>
-                      </div>
-                    </div>
-
-                    {fullCandidate.resumeUrl && (
-                      <a
-                        href={fullCandidate.resumeUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        download={`${fullCandidate.name.replace(/\s+/g, "_")}_Resume.pdf`}
-                      >
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 text-xxs font-bold gap-1 flex items-center"
-                        >
-                          <FileText className="h-3.5 w-3.5" /> Download Resume
-                          PDF
-                        </Button>
-                      </a>
-                    )}
-                  </div>
-
-                  {/* AI Summary */}
-                  <div className="space-y-2">
-                    <h4 className="font-bold text-zinc-800 dark:text-zinc-100 flex items-center gap-1.5">
-                      <Sparkles className="h-4 w-4 text-violet-600 animate-pulse" />
-                      AI Profile Screening Summary
-                    </h4>
-                    <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed bg-violet-50/20 dark:bg-violet-950/10 p-3 rounded-lg border border-violet-100/20">
-                      {fullCandidate.summary ||
-                        "No AI summary parsed for candidate."}
-                    </p>
-                  </div>
-
-                  {/* Skills parsed */}
-                  <div className="space-y-2">
-                    <h4 className="font-bold text-zinc-855 dark:text-zinc-150">
-                      Extracted Skills Inventory
-                    </h4>
-                    <div className="flex flex-wrap gap-1.5">
-                      {fullCandidate.skills &&
-                      fullCandidate.skills.length > 0 ? (
-                        fullCandidate.skills.map((sk: string) => (
-                          <span
-                            key={sk}
-                            className="px-2 py-1 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded font-semibold text-zinc-650"
-                          >
-                            {sk}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-zinc-400 italic">
-                          No skills catalogued.
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Pros & Cons */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <h4 className="font-bold text-emerald-600 flex items-center gap-1.5">
-                        <Check className="h-4 w-4" /> Match Strengths
-                      </h4>
-                      <ul className="space-y-1.5 text-zinc-505 leading-relaxed pl-1">
-                        {fullCandidate.pros?.map((pro: string, idx: number) => (
-                          <li key={idx} className="flex gap-1.5 items-start">
-                            <ChevronRight className="h-3 w-3 mt-0.5 shrink-0 text-emerald-500" />
-                            {pro}
-                          </li>
-                        ))}
-                        {(!fullCandidate.pros ||
-                          fullCandidate.pros.length === 0) && (
-                          <li className="italic text-zinc-400">None parsed</li>
-                        )}
-                      </ul>
-                    </div>
-
-                    <div className="space-y-2">
-                      <h4 className="font-bold text-amber-600 flex items-center gap-1.5">
-                        <X className="h-4 w-4" /> Match Gaps
-                      </h4>
-                      <ul className="space-y-1.5 text-zinc-505 leading-relaxed pl-1">
-                        {fullCandidate.cons?.map((con: string, idx: number) => (
-                          <li key={idx} className="flex gap-1.5 items-start">
-                            <ChevronRight className="h-3 w-3 mt-0.5 shrink-0 text-amber-500" />
-                            {con}
-                          </li>
-                        ))}
-                        {(!fullCandidate.cons ||
-                          fullCandidate.cons.length === 0) && (
-                          <li className="italic text-zinc-400">None parsed</li>
-                        )}
-                      </ul>
-                    </div>
-                  </div>
-
-                  {/* Custom AI Interview Questions */}
-                  {fullCandidate.interviewQuestions &&
-                    fullCandidate.interviewQuestions.length > 0 && (
-                      <div className="space-y-3 border-t border-zinc-150 dark:border-zinc-800 pt-6">
-                        <h4 className="font-bold text-zinc-850 dark:text-zinc-150 flex items-center gap-1.5">
-                          <ShieldCheck className="h-4 w-4 text-blue-600" />
-                          AI Interview Questions Guide
-                        </h4>
-                        <div className="space-y-3">
-                          {fullCandidate.interviewQuestions.map(
-                            (iq: any, idx: number) => (
-                              <div
-                                key={idx}
-                                className="p-3 bg-zinc-50/50 dark:bg-zinc-950/20 border border-zinc-200 dark:border-zinc-800 rounded-lg"
-                              >
-                                <div className="flex justify-between items-center text-[10px] text-zinc-400 font-bold mb-1 uppercase tracking-wider">
-                                  <span>Question {idx + 1}</span>
-                                  <span className="bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded">
-                                    Focus: {iq.focusArea}
-                                  </span>
-                                </div>
-                                <p className="font-bold text-zinc-800 dark:text-zinc-250 leading-relaxed">
-                                  "{iq.question}"
-                                </p>
-                              </div>
-                            ),
-                          )}
-                        </div>
-                      </div>
-                    )}
-                </div>
-
-                {/* Action Gates */}
-                <div className="p-6 border-t border-zinc-150 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/20 flex flex-wrap gap-2 justify-end select-none">
-                  {fullCandidate.stage !== "rejected" && (
-                    <Button
-                      variant="outline"
-                      className="h-8 text-xxs font-bold text-red-600 border-red-200 hover:bg-red-50 dark:border-red-950 dark:hover:bg-red-950/30"
-                      onClick={() =>
-                        moveCandidate(fullCandidate._id, "rejected")
-                      }
-                      disabled={updateCandidateStageMutation.isPending}
-                    >
-                      Reject Candidate
-                    </Button>
-                  )}
-                  {fullCandidate.stage === "applied" && (
-                    <Button
-                      className="h-8 text-xxs font-bold bg-purple-600 hover:bg-purple-700 text-white"
-                      onClick={() =>
-                        moveCandidate(fullCandidate._id, "screened")
-                      }
-                      disabled={updateCandidateStageMutation.isPending}
-                    >
-                      Screen Profile
-                    </Button>
-                  )}
-                  {fullCandidate.stage === "screened" && (
-                    <Button
-                      className="h-8 text-xxs font-bold bg-amber-600 hover:bg-amber-700 text-white"
-                      onClick={() =>
-                        moveCandidate(fullCandidate._id, "interviewing")
-                      }
-                      disabled={updateCandidateStageMutation.isPending}
-                    >
-                      Invite to Interview
-                    </Button>
-                  )}
-                  {fullCandidate.stage === "interviewing" && (
-                    <Button
-                      className="h-8 text-xxs font-bold bg-emerald-600 hover:bg-emerald-700 text-white"
-                      onClick={() =>
-                        moveCandidate(fullCandidate._id, "offered")
-                      }
-                      disabled={updateCandidateStageMutation.isPending}
-                    >
-                      Extend Job Offer
-                    </Button>
-                  )}
-                </div>
-              </>
-            ) : (
-              <div className="flex-1 flex items-center justify-center p-6 text-zinc-400 italic">
-                Failed to load candidate details.
-              </div>
-            )}
-          </motion.div>
-        </motion.div>
-      )}
+      <CandidateDetailsDrawer
+        selectedCandidateId={selectedCandidateId}
+        setSelectedCandidateId={setSelectedCandidateId}
+        loadingDetails={loadingDetails}
+        fullCandidate={fullCandidate}
+        updateCandidateStageMutation={updateCandidateStageMutation}
+        moveCandidate={moveCandidate}
+      />
+      {/* Edit Job Modal */}
+      <EditJobModal
+        editingJob={editingJob}
+        setEditingJob={setEditingJob}
+        editJobTitle={editJobTitle}
+        setEditJobTitle={setEditJobTitle}
+        editJobDept={editJobDept}
+        setEditJobDept={setEditJobDept}
+        editJobLoc={editJobLoc}
+        setEditJobLoc={setEditJobLoc}
+        editJobType={editJobType}
+        setEditJobType={setEditJobType}
+        editJobDesc={editJobDesc}
+        setEditJobDesc={setEditJobDesc}
+        editJobReqs={editJobReqs}
+        setEditJobReqs={setEditJobReqs}
+        updateJobMutation={updateJobMutation}
+      />
+      {/* Toggle Status Confirmation Dialog */}
+      <ToggleStatusDialog
+        togglingJob={togglingJob}
+        setTogglingJob={setTogglingJob}
+        updateJobMutation={updateJobMutation}
+      />
     </div>
   );
 }

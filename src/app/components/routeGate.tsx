@@ -75,6 +75,7 @@ export function RouteGate({ children }: { children: React.ReactNode }) {
         const allowedRoutes = [
           "/dashboard",
           "/features/hr_recruitment",
+          "/features/candidates_pool",
           "/register",
           "/auth/org",
           "/auth/admin",
@@ -124,6 +125,7 @@ export function RouteGate({ children }: { children: React.ReactNode }) {
   const allowedRoutes = [
     "/dashboard",
     "/features/hr_recruitment",
+    "/features/candidates_pool",
     "/register",
     "/auth/org",
     "/auth/admin",

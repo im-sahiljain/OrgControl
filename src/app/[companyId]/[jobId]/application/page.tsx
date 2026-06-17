@@ -288,7 +288,22 @@ export default function JobDetailPage() {
 
         {/* Application Form */}
         <div className="md:col-span-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 shadow-sm">
-          {submitted ? (
+          {job.status !== "active" ? (
+            <div className="text-center py-10 space-y-4 animate-fade-in">
+              <AlertCircle className="h-16 w-16 text-amber-500 mx-auto" />
+              <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-50">
+                Closed Position
+              </h3>
+              <p className="text-xs text-zinc-500 leading-relaxed font-semibold">
+                This job post is currenly not accepting applications
+              </p>
+              <Link href={`/${companyId}/jobs`} className="block pt-2">
+                <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                  Back to Jobs Portal
+                </Button>
+              </Link>
+            </div>
+          ) : submitted ? (
             <div className="text-center py-10 space-y-4 animate-fade-in">
               <CheckCircle2 className="h-16 w-16 text-emerald-500 mx-auto" />
               <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-50">
