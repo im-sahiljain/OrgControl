@@ -4,13 +4,7 @@ import React from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { usePathname, useRouter } from "next/navigation";
 import type { RootState } from "../reduxToolkit/store";
-import {
-  ShieldAlert,
-  LogOut,
-  ArrowRight,
-  UserCheck,
-  Loader2,
-} from "lucide-react";
+import { ShieldAlert, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { setAuthSession } from "../reduxToolkit/slice";
 
@@ -75,6 +69,7 @@ export function RouteGate({ children }: { children: React.ReactNode }) {
         const allowedRoutes = [
           "/dashboard",
           "/features/hr_recruitment",
+          "/features/candidates_pool",
           "/register",
           "/auth/org",
           "/auth/admin",
@@ -124,6 +119,7 @@ export function RouteGate({ children }: { children: React.ReactNode }) {
   const allowedRoutes = [
     "/dashboard",
     "/features/hr_recruitment",
+    "/features/candidates_pool",
     "/register",
     "/auth/org",
     "/auth/admin",

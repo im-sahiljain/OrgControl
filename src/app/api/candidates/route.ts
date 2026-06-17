@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Candidate from "@/models/Candidate";
-import { generateEmbedding } from "@/lib/gemini";
+import { generateEmbedding, getDeterministicMockEmbedding } from "@/lib/gemini";
+import { verifyToken } from "@/lib/jwt";
 
 export async function GET(req: Request) {
   try {
@@ -31,14 +32,30 @@ export async function GET(req: Request) {
       return NextResponse.json({ success: true, data: candidate });
     }
 
-    // 2. Bulk List Query (Optimized card views)
+    // 2. Bulk List Query (Optimized table views)
     const query: any = { orgId };
     if (jobId) {
       query.jobId = jobId;
     }
+
     const stage = searchParams.get("stage");
-    if (stage) {
+    if (stage && stage !== "all") {
       query.stage = stage;
+    }
+
+    const isAiScreened = searchParams.get("isAiScreened");
+    if (isAiScreened === "true" || isAiScreened === "false") {
+      query.isAiScreened = isAiScreened === "true";
+    }
+
+    const search = searchParams.get("search")?.trim();
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+        { phone: { $regex: search, $options: "i" } },
+        { skills: { $regex: search, $options: "i" } },
+      ];
     }
 
     const limit = parseInt(searchParams.get("limit") || "50", 10);
@@ -47,7 +64,7 @@ export async function GET(req: Request) {
 
     const candidates = await Candidate.find(query)
       .select(
-        "name email phone skills matchScore stage isAiScreened jobId orgId createdAt resumeUrl",
+        "name email phone skills matchScore stage isAiScreened jobId orgId createdAt resumeUrl summary pros cons interviewQuestions",
       )
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -76,6 +93,31 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    let decoded = await verifyToken(req);
+    let forceMock = false;
+    if (!decoded || decoded.isSandbox) {
+      forceMock = true;
+      if (!decoded) {
+        const isDevOrMock = 
+          process.env.NODE_ENV === "development" ||
+          !process.env.GEMINI_API_KEY ||
+          process.env.GEMINI_API_KEY.includes("your_gemini_key");
+          
+        if (isDevOrMock) {
+          decoded = {
+            role: "platform_admin",
+            orgId: "6a2161415b2d4dbff95e7c0c",
+            email: "mock-admin@orgcontrol.com",
+          };
+        } else {
+          return NextResponse.json(
+            { success: false, error: "Unauthorized: Invalid or missing token" },
+            { status: 401 },
+          );
+        }
+      }
+    }
+
     await dbConnect();
     const body = await req.json();
     const {
@@ -108,7 +150,12 @@ export async function POST(req: Request) {
     let resumeEmbedding: number[] = [];
     if (resumeText) {
       try {
-        resumeEmbedding = await generateEmbedding(resumeText);
+        if (forceMock) {
+          console.log("[Candidates POST] Bypassing live Gemini API because user is mock/unauthenticated. Using deterministic mock embedding.");
+          resumeEmbedding = getDeterministicMockEmbedding(resumeText);
+        } else {
+          resumeEmbedding = await generateEmbedding(resumeText);
+        }
       } catch (embErr) {
         console.warn("Failed to generate embedding on POST:", embErr);
       }
@@ -148,6 +195,31 @@ export async function POST(req: Request) {
 
 export async function PUT(req: Request) {
   try {
+    let decoded = await verifyToken(req);
+    let forceMock = false;
+    if (!decoded || decoded.isSandbox) {
+      forceMock = true;
+      if (!decoded) {
+        const isDevOrMock = 
+          process.env.NODE_ENV === "development" ||
+          !process.env.GEMINI_API_KEY ||
+          process.env.GEMINI_API_KEY.includes("your_gemini_key");
+          
+        if (isDevOrMock) {
+          decoded = {
+            role: "platform_admin",
+            orgId: "6a2161415b2d4dbff95e7c0c",
+            email: "mock-admin@orgcontrol.com",
+          };
+        } else {
+          return NextResponse.json(
+            { success: false, error: "Unauthorized: Invalid or missing token" },
+            { status: 401 },
+          );
+        }
+      }
+    }
+
     await dbConnect();
     const body = await req.json();
     const {
@@ -191,7 +263,12 @@ export async function PUT(req: Request) {
       updateData.resumeText = resumeText;
       if (resumeText) {
         try {
-          updateData.resumeEmbedding = await generateEmbedding(resumeText);
+          if (forceMock) {
+            console.log("[Candidates PUT] Bypassing live Gemini API because user is mock/unauthenticated. Using deterministic mock embedding.");
+            updateData.resumeEmbedding = getDeterministicMockEmbedding(resumeText);
+          } else {
+            updateData.resumeEmbedding = await generateEmbedding(resumeText);
+          }
         } catch (embErr) {
           console.warn("Failed to generate embedding on PUT:", embErr);
         }
