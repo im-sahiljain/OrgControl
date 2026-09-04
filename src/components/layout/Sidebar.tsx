@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSelector, useDispatch } from "react-redux";
@@ -12,13 +13,15 @@ import {
   Coins,
   TrendingUp,
   Cpu,
-  Settings,
   ShieldAlert,
   LogOut,
   Plus,
   UserPlus,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  Sparkles,
+  Globe,
 } from "lucide-react";
 import type { RootState } from "../../app/reduxToolkit/store";
 import { toggleSidebar, logoutUser } from "../../app/reduxToolkit/slice";
@@ -35,6 +38,12 @@ export function Sidebar({
   const pathname = usePathname();
   const dispatch = useDispatch();
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const user = useSelector((state: RootState) => state.employeeUI.user);
   const isAuthenticated = useSelector(
     (state: RootState) => state.employeeUI.isAuthenticated,
@@ -54,7 +63,18 @@ export function Sidebar({
     router.push("/");
   };
 
-  // Filter main nav items dynamically based on the active session role
+  // Accordion state for Recruitment section
+  const [isRecruitmentOpen, setIsRecruitmentOpen] = useState(true);
+  const orgSlug = (user as any)?.orgSlug || user?.orgId || "demo";
+
+  const recruitmentSubItems = [
+    { name: "Candidates Board", href: "/recruitment/candidates-board" },
+    { name: "Issued Offers", href: "/recruitment/issued-offers" },
+    { name: "Active Postings", href: "/recruitment/postings" },
+    { name: "Create Posting", href: "/recruitment/postings/new" },
+    { name: "Candidates Pool", href: "/candidates-pool" },
+  ];
+
   const mainNavItems = [
     {
       name: "Dashboard",
@@ -63,7 +83,7 @@ export function Sidebar({
       roles: ["org_admin", "employee"],
     },
     {
-      name: "SaaS Maker Admin",
+      name: "Platform Admin",
       href: "/admin/dashboard",
       icon: ShieldAlert,
       roles: ["platform_admin"],
@@ -78,18 +98,25 @@ export function Sidebar({
       name: "Employees",
       href: "/employees",
       icon: Users,
-      roles: ["org_admin"],
+      roles: ["org_admin", "employee"],
     },
     {
       name: "Recruitment",
-      href: "/features/hr_recruitment",
+      href: "/recruitment",
       icon: UserPlus,
       roles: ["org_admin", "employee"],
     },
     {
-      name: "Candidates Pool",
-      href: "/features/candidates_pool",
-      icon: Users,
+      name: "Careers Portal",
+      href: `/${orgSlug}/jobs`,
+      icon: Globe,
+      roles: ["org_admin", "employee"],
+      isExternal: true,
+    },
+    {
+      name: "Semantic RAG Search",
+      href: "/recruitment/rag-search",
+      icon: Sparkles,
       roles: ["org_admin", "employee"],
     },
     {
@@ -139,27 +166,26 @@ export function Sidebar({
     return null;
   }
 
-  const userRole = user?.role || "employee";
-  const userDept = user?.department || "";
+  const userRole = (mounted ? user?.role : null) || "employee";
+  const userDept = (mounted ? user?.department : null) || "";
   const filteredMainNav = mainNavItems.filter((item) => {
     // Only show the main application shortcuts that are built out.
     if (
       item.name !== "Dashboard" &&
+      item.name !== "Employees" &&
       item.name !== "Recruitment" &&
-      item.name !== "Candidates Pool"
+      item.name !== "Careers Portal" &&
+      item.name !== "Candidates Pool" &&
+      item.name !== "Semantic RAG Search"
     ) {
       return false;
     }
     if (!item.roles.includes(userRole)) return false;
     if (
-      item.name === "Recruitment" &&
-      userRole !== "org_admin" &&
-      userDept !== "Human Resources"
-    ) {
-      return false;
-    }
-    if (
-      item.name === "Candidates Pool" &&
+      (item.name === "Recruitment" ||
+        item.name === "Careers Portal" ||
+        item.name === "Candidates Pool" ||
+        item.name === "Semantic RAG Search") &&
       userRole !== "org_admin" &&
       userDept !== "Human Resources"
     ) {
@@ -211,14 +237,108 @@ export function Sidebar({
 
           <nav className="flex-1 space-y-1">
             {filteredMainNav.map((item) => {
+              const isRecruitment = item.name === "Recruitment";
+              const isRecruitmentActive =
+                pathname === "/recruitment" ||
+                (pathname.startsWith("/recruitment") && !isCollapsed);
+
+              if (isRecruitment) {
+                return (
+                  <div key={item.name} className="space-y-1">
+                    <button
+                      onClick={() => {
+                        if (isCollapsed) {
+                          dispatch(toggleSidebar());
+                          setIsRecruitmentOpen(true);
+                        } else {
+                          setIsRecruitmentOpen(!isRecruitmentOpen);
+                        }
+                      }}
+                      title={isCollapsed ? item.name : undefined}
+                      suppressHydrationWarning
+                      className={`w-full flex items-center cursor-pointer ${
+                        enableTransition ? "transition-all duration-300" : ""
+                      } ${
+                        isCollapsed
+                          ? "justify-center p-2 mx-auto w-10 h-10 rounded-lg"
+                          : "justify-between px-3 py-2 rounded-lg"
+                      } ${
+                        isRecruitmentActive
+                          ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-900/50 dark:text-zinc-50"
+                          : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900/50 dark:hover:text-zinc-50"
+                      }`}
+                    >
+                      <div
+                        className={`flex items-center ${isCollapsed ? "justify-center" : "gap-3"}`}
+                      >
+                        <item.icon
+                          className={`h-5 w-5 shrink-0 ${
+                            isRecruitmentActive
+                              ? "text-zinc-900 dark:text-zinc-100"
+                              : "text-zinc-500 dark:text-zinc-400"
+                          }`}
+                        />
+                        <span
+                          suppressHydrationWarning
+                          className={`font-medium text-sm whitespace-nowrap ${
+                            enableTransition
+                              ? "transition-all duration-300"
+                              : ""
+                          } ${
+                            isCollapsed
+                              ? "opacity-0 w-0 overflow-hidden hidden"
+                              : "opacity-100 w-auto"
+                          }`}
+                        >
+                          {item.name}
+                        </span>
+                      </div>
+                      {!isCollapsed && (
+                        <ChevronDown
+                          className={`h-4 w-4 text-zinc-400 transition-transform duration-200 ${
+                            isRecruitmentOpen ? "rotate-0" : "-rotate-90"
+                          }`}
+                        />
+                      )}
+                    </button>
+
+                    {isRecruitmentOpen && !isCollapsed && (
+                      <div className="ml-5 border-l border-zinc-200 dark:border-zinc-800 pl-3 my-1 space-y-1">
+                        {recruitmentSubItems.map((sub) => {
+                          const isSubActive = pathname === sub.href;
+                          return (
+                            <Link
+                              key={sub.name}
+                              href={sub.href}
+                              className={`block px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                                isSubActive
+                                  ? "bg-zinc-100 text-blue-600 dark:bg-zinc-900/60 dark:text-blue-400 font-semibold"
+                                  : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-900/30"
+                              }`}
+                            >
+                              {sub.name}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
               const isActive = pathname === item.href;
+              const isExternal = (item as any).isExternal;
               return (
                 <Link
                   key={item.name}
                   href={item.href}
+                  target={isExternal ? "_blank" : undefined}
+                  rel={isExternal ? "noopener noreferrer" : undefined}
                   title={isCollapsed ? item.name : undefined}
                   suppressHydrationWarning
-                  className={`flex items-center ${enableTransition ? "transition-all duration-300" : ""} ${
+                  className={`flex items-center ${
+                    enableTransition ? "transition-all duration-300" : ""
+                  } ${
                     isCollapsed
                       ? "justify-center p-2 mx-auto w-10 h-10 rounded-lg"
                       : "gap-3 px-3 py-2 rounded-lg"
@@ -229,11 +349,21 @@ export function Sidebar({
                   }`}
                 >
                   <item.icon
-                    className={`h-5 w-5 shrink-0 ${isActive ? "text-zinc-900 dark:text-zinc-100" : "text-zinc-500 dark:text-zinc-400"}`}
+                    className={`h-5 w-5 shrink-0 ${
+                      isActive
+                        ? "text-zinc-900 dark:text-zinc-100"
+                        : "text-zinc-500 dark:text-zinc-400"
+                    }`}
                   />
                   <span
                     suppressHydrationWarning
-                    className={`font-medium text-sm whitespace-nowrap ${enableTransition ? "transition-all duration-300" : ""} ${isCollapsed ? "opacity-0 w-0 overflow-hidden ml-0" : "opacity-100 w-auto ml-3"}`}
+                    className={`font-medium text-sm whitespace-nowrap ${
+                      enableTransition ? "transition-all duration-300" : ""
+                    } ${
+                      isCollapsed
+                        ? "opacity-0 w-0 overflow-hidden hidden"
+                        : "opacity-100 w-auto"
+                    }`}
                   >
                     {item.name}
                   </span>
@@ -253,8 +383,8 @@ export function Sidebar({
                       isLogout
                         ? ""
                         : isActive
-                        ? "text-zinc-900 dark:text-zinc-100"
-                        : "text-zinc-500 dark:text-zinc-400"
+                          ? "text-zinc-900 dark:text-zinc-100"
+                          : "text-zinc-500 dark:text-zinc-400"
                     }`}
                   />
                   <span
@@ -360,6 +490,64 @@ export function Sidebar({
 
           <nav className="flex-1 space-y-1">
             {filteredMainNav.map((item) => {
+              const isRecruitment = item.name === "Recruitment";
+              const isRecruitmentActive =
+                pathname.startsWith("/recruitment") ||
+                pathname === "/candidates-pool";
+
+              if (isRecruitment) {
+                return (
+                  <div key={item.name} className="space-y-1">
+                    <button
+                      onClick={() => setIsRecruitmentOpen(!isRecruitmentOpen)}
+                      className={`w-full flex items-center justify-between rounded-lg px-3 py-2 transition-all ${
+                        isRecruitmentActive
+                          ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-900/50 dark:text-zinc-50"
+                          : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900/50 dark:hover:text-zinc-50"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <item.icon
+                          className={`h-5 w-5 ${
+                            isRecruitmentActive
+                              ? "text-zinc-900 dark:text-zinc-100"
+                              : "text-zinc-500 dark:text-zinc-400"
+                          }`}
+                        />
+                        <span className="font-medium text-sm">{item.name}</span>
+                      </div>
+                      <ChevronDown
+                        className={`h-4 w-4 text-zinc-400 transition-transform duration-200 ${
+                          isRecruitmentOpen ? "rotate-0" : "-rotate-90"
+                        }`}
+                      />
+                    </button>
+
+                    {isRecruitmentOpen && (
+                      <div className="ml-5 border-l border-zinc-200 dark:border-zinc-800 pl-3 my-1 space-y-1">
+                        {recruitmentSubItems.map((sub) => {
+                          const isSubActive = pathname === sub.href;
+                          return (
+                            <Link
+                              key={sub.name}
+                              href={sub.href}
+                              onClick={onClose}
+                              className={`block px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                                isSubActive
+                                  ? "bg-zinc-100 text-blue-600 dark:bg-zinc-900/60 dark:text-blue-400 font-semibold"
+                                  : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-900/30"
+                              }`}
+                            >
+                              {sub.name}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
               const isActive = pathname === item.href;
               return (
                 <Link
@@ -392,8 +580,8 @@ export function Sidebar({
                       isLogout
                         ? ""
                         : isActive
-                        ? "text-zinc-900 dark:text-zinc-100"
-                        : "text-zinc-500 dark:text-zinc-400"
+                          ? "text-zinc-900 dark:text-zinc-100"
+                          : "text-zinc-500 dark:text-zinc-400"
                     }`}
                   />
                   <span className="font-medium text-sm">{item.name}</span>

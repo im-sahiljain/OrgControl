@@ -26,11 +26,16 @@ export const CandidateCard = React.memo(
       const el = cardRef.current;
       if (!el || !dndManager) return;
       const draggable = new Draggable(
-        { id: cand._id, element: el },
+        {
+          id: cand._id,
+          element: el,
+          type: "card",
+          data: { id: cand._id, stage: cand.stage },
+        },
         dndManager,
       );
       return () => draggable.destroy();
-    }, [cand._id, dndManager]);
+    }, [cand._id, cand.stage, dndManager]);
 
     return (
       <div

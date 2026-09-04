@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
 import axios from "axios";
@@ -110,7 +110,7 @@ const CandidateDetailsModal = ({
   jobs?: any[];
 }) => {
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-[100] overflow-y-auto bg-black/60 backdrop-blur-sm p-4 flex items-center justify-center">
       <div className="relative mx-auto max-w-4xl rounded-3xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden">
         <div className="flex items-start justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/80 p-6">
           <div>
@@ -572,14 +572,16 @@ export default function CandidatesPoolPage() {
                   <TableHead>Skills</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-center">AI Screened</TableHead>
-                  <TableHead className="text-center">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {candidates.map((candidate: any, index: number) => (
                   <TableRow
                     key={candidate._id || candidate.id}
-                    className="hover:bg-zinc-50 dark:hover:bg-zinc-900/70"
+                    onClick={() =>
+                      setSelectedCandidateId(candidate._id || candidate.id)
+                    }
+                    className="cursor-pointer hover:bg-zinc-50/80 dark:hover:bg-zinc-900/70 transition-colors"
                   >
                     <TableCell className="text-center font-semibold text-zinc-400 dark:text-zinc-500">
                       {(page - 1) * limit + index + 1}
@@ -604,22 +606,6 @@ export default function CandidatesPoolPage() {
                       >
                         {candidate.isAiScreened ? "Yes" : "No"}
                       </span>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <div className="inline-flex flex-wrap justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 text-xxs font-semibold px-3"
-                          onClick={() =>
-                            setSelectedCandidateId(
-                              candidate._id || candidate.id,
-                            )
-                          }
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

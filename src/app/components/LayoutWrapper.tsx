@@ -8,6 +8,8 @@ import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "../reduxToolkit/store";
 import { setSidebarCollapsed } from "../reduxToolkit/slice";
 
+import { GlobalScreeningWorker } from "@/components/recruitment/GlobalScreeningWorker";
+
 export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const dispatch = useDispatch();
@@ -42,7 +44,8 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
     publicRoutes.includes(pathname) || 
     isJobsLegacy ||
     isCompanyJobs ||
-    isJobApplication;
+    isJobApplication ||
+    pathname.startsWith("/offer/");
 
   if (isPublicPage) {
     return (
@@ -61,6 +64,7 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+      <GlobalScreeningWorker />
     </div>
   );
 }

@@ -119,7 +119,7 @@ export default function DepartmentFeatureCard({
           </button>
         ) : (
           <Link
-            href={`/features/${feature.id}`}
+            href={feature.id === "hr_recruitment" ? "/recruitment" : `/features/${feature.id}`}
             className={`w-full py-2 px-3 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${
               accessLevel === "full"
                 ? "bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:hover:bg-white dark:text-zinc-900 shadow-sm"

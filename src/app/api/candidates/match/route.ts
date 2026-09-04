@@ -75,6 +75,9 @@ export async function POST(req: Request) {
     if (searchQuery && searchQuery.trim().length > 0) {
       queryText = searchQuery.trim();
       console.log(`Performing semantic RAG search with query: "${queryText}"`);
+    } else if (jobId === "all") {
+      queryText = "General candidate qualifications, experience, skills, and resume profile.";
+      console.log("Performing RAG matching across All Candidates (Global Pool)");
     } else {
       // If no search query is specified, match candidates against the job posting description
       const job = await JobPosting.findById(jobId);
@@ -102,6 +105,14 @@ export async function POST(req: Request) {
     let candidates: any[] = [];
     let searchMethod = "vectorSearch";
 
+    // Build Mongo match query
+    const matchQuery: any = {
+      orgId: new mongoose.Types.ObjectId(decoded.orgId),
+    };
+    if (jobId !== "all") {
+      matchQuery.jobId = new mongoose.Types.ObjectId(jobId);
+    }
+
     // 2. Perform search
     try {
       console.log(
@@ -119,10 +130,7 @@ export async function POST(req: Request) {
           },
         },
         {
-          $match: {
-            orgId: new mongoose.Types.ObjectId(decoded.orgId),
-            jobId: new mongoose.Types.ObjectId(jobId),
-          },
+          $match: matchQuery,
         },
         {
           $limit: limit,
@@ -150,10 +158,13 @@ export async function POST(req: Request) {
 
       // Fallback if the Atlas index hasn't been created yet and returns 0 results
       if (candidates.length === 0) {
-        const countWithEmbeddings = await Candidate.countDocuments({
-          jobId,
+        const countFilter: any = {
           resumeEmbedding: { $exists: true, $ne: [] },
-        });
+        };
+        if (jobId !== "all") {
+          countFilter.jobId = jobId;
+        }
+        const countWithEmbeddings = await Candidate.countDocuments(countFilter);
         if (countWithEmbeddings > 0) {
           console.log(
             `[RAG Match] Atlas returned 0 results but ${countWithEmbeddings} candidates have embeddings. Forcing in-memory fallback.`,
@@ -174,14 +185,17 @@ export async function POST(req: Request) {
       );
       searchMethod = "inMemoryFallback";
 
-      // 3. Fallback: Load all candidate vectors for the jobId and calculate cosine similarity
+      // 3. Fallback: Load candidate vectors for the org / jobId and calculate cosine similarity
       console.log(
         `[RAG Match] Querying database candidates for jobId: "${jobId}"`,
       );
-      const allCandidates = await Candidate.find({
-        jobId,
+      const findFilter: any = {
         resumeEmbedding: { $exists: true, $ne: [] },
-      }).select(
+      };
+      if (jobId !== "all") {
+        findFilter.jobId = jobId;
+      }
+      const allCandidates = await Candidate.find(findFilter).select(
         "name email phone resumeUrl stage isAiScreened matchScore skills summary createdAt resumeEmbedding",
       );
       console.log(

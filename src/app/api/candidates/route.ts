@@ -34,7 +34,7 @@ export async function GET(req: Request) {
 
     // 2. Bulk List Query (Optimized table views)
     const query: any = { orgId };
-    if (jobId) {
+    if (jobId && jobId !== "all") {
       query.jobId = jobId;
     }
 
@@ -58,18 +58,22 @@ export async function GET(req: Request) {
       ];
     }
 
-    const limit = parseInt(searchParams.get("limit") || "50", 10);
+    const isAll = searchParams.get("all") === "true";
+    const limit = isAll ? 0 : parseInt(searchParams.get("limit") || "50", 10);
     const page = parseInt(searchParams.get("page") || "1", 10);
-    const skip = (page - 1) * limit;
+    const skip = isAll ? 0 : (page - 1) * limit;
 
-    const candidates = await Candidate.find(query)
+    let candidateQuery = Candidate.find(query)
       .select(
-        "name email phone skills matchScore stage isAiScreened jobId orgId createdAt resumeUrl summary pros cons interviewQuestions",
+        "name email phone skills matchScore stage offerStatus offerToken offerDetails onboardedEmployeeId isAiScreened jobId orgId createdAt resumeUrl resumeText summary pros cons interviewQuestions",
       )
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
+      .sort({ createdAt: -1 });
 
+    if (!isAll && limit > 0) {
+      candidateQuery = candidateQuery.skip(skip).limit(limit);
+    }
+
+    const candidates = await candidateQuery;
     const total = await Candidate.countDocuments(query);
 
     return NextResponse.json({
@@ -77,9 +81,9 @@ export async function GET(req: Request) {
       data: candidates,
       pagination: {
         total,
-        page,
-        limit,
-        pages: Math.ceil(total / limit),
+        page: isAll ? 1 : page,
+        limit: isAll ? total : limit,
+        pages: isAll ? 1 : Math.ceil(total / (limit || 1)),
       },
     });
   } catch (error: any) {
@@ -168,7 +172,7 @@ export async function POST(req: Request) {
       email,
       phone,
       resumeUrl,
-      stage: "screened",
+      stage: stage || (isAiScreened ? "screened" : "applied"),
       isAiScreened: isAiScreened !== undefined ? isAiScreened : false,
       matchScore: matchScore || 0,
       skills: skills || [],
@@ -225,6 +229,9 @@ export async function PUT(req: Request) {
     const {
       id,
       stage,
+      offerStatus,
+      offerToken,
+      offerDetails,
       name,
       email,
       phone,
@@ -247,6 +254,9 @@ export async function PUT(req: Request) {
 
     const updateData: any = {};
     if (stage !== undefined) updateData.stage = stage;
+    if (offerStatus !== undefined) updateData.offerStatus = offerStatus;
+    if (offerToken !== undefined) updateData.offerToken = offerToken;
+    if (offerDetails !== undefined) updateData.offerDetails = offerDetails;
     if (name !== undefined) updateData.name = name;
     if (email !== undefined) updateData.email = email;
     if (phone !== undefined) updateData.phone = phone;

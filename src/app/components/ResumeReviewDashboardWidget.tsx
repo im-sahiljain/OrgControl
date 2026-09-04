@@ -145,7 +145,7 @@ export default function ResumeReviewDashboardWidget({
   const { data: candidates, isLoading: loadingCandidates } = useQuery({
     queryKey: ["dashboard-recent-candidates", orgId],
     queryFn: async () => {
-      const res = await axios.get(`/api/candidates?orgId=${orgId}`);
+      const res = await axios.get(`/api/candidates?orgId=${orgId}&all=true`);
       return res.data.data || [];
     },
     enabled: !!orgId,
@@ -265,7 +265,7 @@ export default function ResumeReviewDashboardWidget({
               Recent Applicants Activity
             </p>
             <Link
-              href="/features/hr_recruitment"
+              href="/recruitment"
               className="text-xxs font-bold text-blue-600 hover:text-blue-700 hover:underline"
             >
               View All
@@ -355,7 +355,7 @@ export default function ResumeReviewDashboardWidget({
           </div>
 
           <div className="space-y-2 pt-4">
-            <Link href="/features/hr_recruitment" className="block">
+            <Link href="/recruitment" className="block">
               <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-9 text-xs flex justify-center items-center gap-1.5 shadow-sm">
                 Open Recruitment Pipeline
                 <ArrowRight className="h-4 w-4" />

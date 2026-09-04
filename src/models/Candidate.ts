@@ -7,7 +7,18 @@ export interface ICandidate extends Document {
   email: string;
   phone: string;
   resumeUrl: string;
-  stage: "applied" | "screened" | "interviewing" | "offered" | "rejected";
+  stage: "applied" | "screened" | "interviewing" | "offered" | "hired" | "rejected";
+  offerStatus?: "none" | "pending" | "accepted" | "declined";
+  offerToken?: string;
+  offerDetails?: {
+    designation?: string;
+    salary?: string;
+    joiningDate?: string;
+    expiryDate?: string;
+    notes?: string;
+    respondedAt?: Date;
+  };
+  onboardedEmployeeId?: string;
   isAiScreened: boolean;
   matchScore: number;
   skills: string[];
@@ -31,9 +42,24 @@ const CandidateSchema: Schema = new Schema<ICandidate>(
     resumeUrl: { type: String, required: true },
     stage: {
       type: String,
-      enum: ["applied", "screened", "interviewing", "offered", "rejected"],
+      enum: ["applied", "screened", "interviewing", "offered", "hired", "rejected"],
       default: "applied",
     },
+    offerStatus: {
+      type: String,
+      enum: ["none", "pending", "accepted", "declined"],
+      default: "none",
+    },
+    offerToken: { type: String, index: true },
+    offerDetails: {
+      designation: { type: String },
+      salary: { type: String },
+      joiningDate: { type: String },
+      expiryDate: { type: String },
+      notes: { type: String },
+      respondedAt: { type: Date },
+    },
+    onboardedEmployeeId: { type: String },
     isAiScreened: { type: Boolean, default: false },
     matchScore: { type: Number, default: 0 },
     skills: { type: [String], default: [] },

@@ -42,7 +42,15 @@ export const KanbanColumn = React.memo(function KanbanColumn({
   useEffect(() => {
     const el = colRef.current;
     if (!el || !dndManager) return;
-    const droppable = new Droppable({ id: stageId, element: el }, dndManager);
+    const droppable = new Droppable(
+      {
+        id: stageId,
+        element: el,
+        type: "column",
+        data: { stage: stageId },
+      },
+      dndManager,
+    );
     return () => droppable.destroy();
   }, [stageId, dndManager]);
 

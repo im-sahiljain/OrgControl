@@ -19,7 +19,7 @@ export default function UnscreenedResumesWidget({ orgId }: UnscreenedResumesWidg
   const { data: candidates, isLoading } = useQuery({
     queryKey: ["unscreened-candidates", orgId],
     queryFn: async () => {
-      const res = await axios.get(`/api/candidates?orgId=${orgId}`);
+      const res = await axios.get(`/api/candidates?orgId=${orgId}&all=true`);
       return res.data.data || [];
     },
     enabled: !!orgId,

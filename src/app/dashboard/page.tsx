@@ -1,46 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import Link from "next/link";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSelector } from "react-redux";
 import axios from "axios";
-import {
-  Users,
-  Clock,
-  CalendarCheck2,
-  TrendingUp,
-  Cpu,
-  Coins,
-  Settings,
-  ArrowRight,
-  ShieldCheck,
-  CheckCircle2,
-  Award,
-  Terminal,
-  Activity,
-  ChevronRight,
-  TrendingDown,
-  Building,
-  UserCheck,
-} from "lucide-react";
+import { Settings, ShieldCheck } from "lucide-react";
 import type { RootState } from "../reduxToolkit/store";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import DepartmentFeatureCard from "../components/DepartmentFeatureCard";
-// import UnscreenedResumesWidget from "../components/UnscreenedResumesWidget";
 import ResumeReviewDashboardWidget from "../components/ResumeReviewDashboardWidget";
-import {
-  resolveDepartmentRole,
-  getVisibleFeatures,
-  getRoleLabel,
-  getDataScope,
-  getFeatureAccessLevel,
-} from "@/lib/roleResolver";
-import {
-  getFeatureById,
-  getDefaultFeatureIdsForDept,
-} from "@/lib/departmentRegistry";
+import RecruitmentAnalyticsWidget from "../components/RecruitmentAnalyticsWidget";
 
 export default function Dashboard() {
   const user = useSelector((state: RootState) => state.employeeUI.user);
@@ -394,6 +361,9 @@ export default function Dashboard() {
 
         {/* Resume Review Workspace Metrics */}
         {user?.orgId && <ResumeReviewDashboardWidget orgId={user.orgId} />}
+
+        {/* Recruitment Analytics & Charts Widget */}
+        {user?.orgId && <RecruitmentAnalyticsWidget orgId={user.orgId} />}
 
         {/* {user?.orgId && <UnscreenedResumesWidget orgId={user.orgId} />} */}
 

@@ -21,11 +21,6 @@ interface RagSearchProps {
   loadingJobs: boolean;
   selectedJobId: string;
   setSelectedJobId: (val: string) => void;
-  batchScreening: boolean;
-  batchProgress: number;
-  batchTotal: number;
-  batchCurrentName: string;
-  handleBatchScreen: () => void;
   ragSearchQuery: string;
   setRagSearchQuery: (val: string) => void;
   runRagSearch: (query?: string) => void;
@@ -35,10 +30,6 @@ interface RagSearchProps {
   ragResults: any[] | null;
   setSelectedCandidateId: (id: string) => void;
   handleUpdateStageFromRag: (id: string, stage: string) => void;
-  totalCandidates: number;
-  screenedCandidates: number;
-  unscreenedCandidates: number;
-  loadingJobCandidates: boolean;
 }
 
 export const RagSearch: React.FC<RagSearchProps> = ({
@@ -46,11 +37,6 @@ export const RagSearch: React.FC<RagSearchProps> = ({
   loadingJobs,
   selectedJobId,
   setSelectedJobId,
-  batchScreening,
-  batchProgress,
-  batchTotal,
-  batchCurrentName,
-  handleBatchScreen,
   ragSearchQuery,
   setRagSearchQuery,
   runRagSearch,
@@ -60,17 +46,13 @@ export const RagSearch: React.FC<RagSearchProps> = ({
   ragResults,
   setSelectedCandidateId,
   handleUpdateStageFromRag,
-  totalCandidates,
-  screenedCandidates,
-  unscreenedCandidates,
-  loadingJobCandidates,
 }) => {
   return (
     <div className="space-y-6">
       {/* Job selection dropdown */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-4 rounded-xl shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-          <span className="text-xs font-bold text-zinc-400 whitespace-nowrap">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 flex-wrap">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-wrap">
+          <span className="text-xs font-bold text-zinc-400">
             Select Job Post:
           </span>
           {loadingJobs ? (
@@ -85,7 +67,10 @@ export const RagSearch: React.FC<RagSearchProps> = ({
                 align="start"
                 className="w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-2rem)]"
               >
-                {jobs.map((job: any) => (
+                <SelectItem value="all">
+                  All Job Postings (Global Pool)
+                </SelectItem>
+                {(jobs || []).map((job: any) => (
                   <SelectItem key={job._id} value={job._id}>
                     {job.title} ({job.location})
                     {job.status !== "active" && " (Inactive)"}
@@ -98,73 +83,8 @@ export const RagSearch: React.FC<RagSearchProps> = ({
               No job postings created yet.
             </span>
           )}
-
-          {selectedJobId && (
-            <div className="flex items-center gap-3 text-xxs font-bold text-zinc-450 bg-zinc-50 dark:bg-zinc-950/40 px-2.5 py-1 rounded-lg border border-zinc-200/60 dark:border-zinc-850 whitespace-nowrap">
-              {loadingJobCandidates ? (
-                <span className="flex items-center gap-1 text-[10px] text-zinc-400">
-                  <Loader2 className="h-3 w-3 animate-spin" /> Loading stats...
-                </span>
-              ) : (
-                <>
-                  <span>Total: <strong className="text-zinc-700 dark:text-zinc-300 font-extrabold">{totalCandidates}</strong></span>
-                  <span className="text-zinc-200 dark:text-zinc-800">|</span>
-                  <span className="text-violet-650 dark:text-violet-400">Screened: <strong className="font-extrabold">{screenedCandidates}</strong></span>
-                  <span className="text-zinc-200 dark:text-zinc-800">|</span>
-                  <span className="text-amber-600 dark:text-amber-500">Unscreened: <strong className="font-extrabold">{unscreenedCandidates}</strong></span>
-                </>
-              )}
-            </div>
-          )}
         </div>
-
-        {selectedJobId && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 text-xxs font-bold gap-1 flex items-center bg-violet-50 hover:bg-violet-100 dark:bg-violet-950/20 text-violet-650 hover:text-violet-750 dark:text-violet-400 border-violet-100/50 dark:border-violet-900/50"
-            onClick={handleBatchScreen}
-            disabled={batchScreening}
-          >
-            {batchScreening ? (
-              <>
-                <Loader2 className="h-3 w-3 animate-spin" />
-                Screening {batchProgress}/{batchTotal} ({batchCurrentName})
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-3.5 w-3.5" />
-                Auto-Screen Unscreened Candidates
-              </>
-            )}
-          </Button>
-        )}
       </div>
-
-      {/* Batch progress display panel */}
-      {batchScreening && (
-        <div className="p-4 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 rounded-xl space-y-2 animate-pulse">
-          <div className="flex justify-between text-xxs font-bold text-zinc-500">
-            <span>AI Screening Pipeline Queue...</span>
-            <span>
-              {batchProgress} of {batchTotal} candidates (
-              {Math.round((batchProgress / (batchTotal || 1)) * 100)}%)
-            </span>
-          </div>
-          <div className="w-full bg-zinc-200 dark:bg-zinc-800 h-2 rounded-full overflow-hidden">
-            <div
-              className="bg-violet-600 h-full rounded-full transition-all duration-300"
-              style={{ width: `${(batchProgress / (batchTotal || 1)) * 100}%` }}
-            />
-          </div>
-          <p className="text-[10px] text-zinc-400 italic">
-            Processing resume text and generating vector embeddings for:{" "}
-            <strong className="text-zinc-650 dark:text-zinc-300">
-              {batchCurrentName}
-            </strong>
-          </p>
-        </div>
-      )}
 
       {/* RAG Query Controls */}
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl shadow-sm space-y-4">
@@ -214,12 +134,17 @@ export const RagSearch: React.FC<RagSearchProps> = ({
           <Button
             variant="outline"
             size="sm"
-            className="h-9 px-3 text-xs gap-1 flex items-center border-zinc-250 hover:bg-zinc-50 dark:hover:bg-zinc-850"
+            className="h-9 px-3 text-xs gap-1 flex items-center border-zinc-250 hover:bg-zinc-50 dark:hover:bg-zinc-850 cursor-pointer disabled:opacity-50"
             onClick={() => {
               setRagSearchQuery("");
               runRagSearch("");
             }}
-            disabled={searchingRag || !selectedJobId || ragSearchQuery === ""}
+            disabled={searchingRag || !selectedJobId || selectedJobId === "all"}
+            title={
+              selectedJobId === "all"
+                ? "Select a specific job post to use JD Match"
+                : undefined
+            }
           >
             {ragSearchQuery === "" && searchingRag ? (
               <>
@@ -342,18 +267,19 @@ export const RagSearch: React.FC<RagSearchProps> = ({
                   </div>
 
                   {/* Right: Score & Actions */}
-                  <div className="flex flex-row md:flex-col justify-between items-center md:items-end gap-4 shrink-0 min-w-[150px]">
-                    <div className="flex items-center gap-2">
+                  <div className="flex flex-row md:flex-col justify-between items-center md:items-end gap-4 shrink-0 min-w-[170px]">
+                    <div className="flex items-center gap-3">
+                      {/* RAG Vector Similarity Score */}
                       <div className="text-right">
-                        <span className="text-xxs text-zinc-400 font-bold block uppercase tracking-wider">
-                          Similarity Match
+                        <span className="text-[10px] text-zinc-400 font-bold block uppercase tracking-wider">
+                          RAG Vector Match
                         </span>
                         <span
-                          className={`text-base font-extrabold block mt-0.5 ${
+                          className={`text-sm font-extrabold block mt-0.5 ${
                             cand.matchPercentage >= 80
-                              ? "text-emerald-600"
+                              ? "text-emerald-600 dark:text-emerald-400"
                               : cand.matchPercentage >= 70
-                                ? "text-purple-600"
+                                ? "text-purple-600 dark:text-purple-400"
                                 : "text-zinc-500"
                           }`}
                         >
@@ -361,9 +287,27 @@ export const RagSearch: React.FC<RagSearchProps> = ({
                         </span>
                       </div>
 
-                      <div className="h-9 w-9 rounded-full border-2 border-zinc-100 dark:border-zinc-800 flex items-center justify-center font-bold text-xs bg-zinc-50 dark:bg-zinc-950">
-                        {cand.matchPercentage}
-                      </div>
+                      {/* Gemini AI Screening Score */}
+                      {cand.isAiScreened &&
+                      typeof cand.matchScore === "number" ? (
+                        <div className="text-right border-l border-zinc-200 dark:border-zinc-800 pl-3">
+                          <span className="text-[10px] text-zinc-400 font-bold block uppercase tracking-wider">
+                            Gemini AI Score
+                          </span>
+                          <span className="text-sm font-extrabold block mt-0.5 text-blue-600 dark:text-blue-400">
+                            {cand.matchScore}%
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="text-right border-l border-zinc-200 dark:border-zinc-800 pl-3">
+                          <span className="text-[10px] text-zinc-400 font-bold block uppercase tracking-wider">
+                            Gemini AI Score
+                          </span>
+                          <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 block mt-1">
+                            Pending AI
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex gap-2">

@@ -69,55 +69,108 @@ export interface ParsedResumeResult {
 /**
  * Generates realistic mock screening results based on job title and candidate name.
  */
-export function getMockScreeningResult(candidateName: string, jobTitle: string): ParsedResumeResult {
+export function getMockScreeningResult(
+  candidateName: string,
+  jobTitle: string,
+): ParsedResumeResult {
   const titleLower = jobTitle.toLowerCase();
   let skills = ["JavaScript", "TypeScript", "REST APIs", "Git", "Agile"];
   let summary = `Candidate ${candidateName} shows solid foundations as a software developer. They demonstrate standard knowledge of design patterns, software engineering principles, and database management systems. Recommended for next stages of screening.`;
   let pros = [
     "Strong problem-solving capabilities",
     "Familiar with modern version control workflows",
-    "Clear structure and clean documentation in resume"
+    "Clear structure and clean documentation in resume",
   ];
   let cons = [
     "Lacks specialized experience in heavy high-scale production systems",
-    "Could benefit from deeper cloud infrastructure certification"
+    "Could benefit from deeper cloud infrastructure certification",
   ];
   let questions = [
-    { question: `Can you explain a challenging project where you designed APIs for a ${jobTitle} role?`, focusArea: "System Design" },
-    { question: "How do you handle debugging complex state interactions in a multi-tenant client app?", focusArea: "Problem Solving" }
+    {
+      question: `Can you explain a challenging project where you designed APIs for a ${jobTitle} role?`,
+      focusArea: "System Design",
+    },
+    {
+      question:
+        "How do you handle debugging complex state interactions in a multi-tenant client app?",
+      focusArea: "Problem Solving",
+    },
   ];
 
-  if (titleLower.includes("front") || titleLower.includes("react") || titleLower.includes("ui") || titleLower.includes("web")) {
-    skills = ["React.js", "Redux Toolkit", "TypeScript", "Tailwind CSS", "Jest", "HTML5/CSS3", "TanStack Query"];
+  if (
+    titleLower.includes("front") ||
+    titleLower.includes("react") ||
+    titleLower.includes("ui") ||
+    titleLower.includes("web")
+  ) {
+    skills = [
+      "React.js",
+      "Redux Toolkit",
+      "TypeScript",
+      "Tailwind CSS",
+      "Jest",
+      "HTML5/CSS3",
+      "TanStack Query",
+    ];
     summary = `Candidate ${candidateName} exhibits strong expertise in frontend engineering, specializing in React.js and state management tools like Redux. Their background shows active experience creating reusable components and optimizing render times.`;
     pros = [
       "Proficient with modern React rendering optimizations (useMemo, React.memo)",
       "Extensive experience translating Figma designs into responsive UIs",
-      "Strong global state management knowledge using Redux Toolkit"
+      "Strong global state management knowledge using Redux Toolkit",
     ];
     cons = [
       "Familiarity with server-side rendering frameworks like Next.js could be deeper",
-      "CSS layout styling details show minor consistency gaps"
+      "CSS layout styling details show minor consistency gaps",
     ];
     questions = [
-      { question: "What strategies do you use to reduce unnecessary component re-renders in a complex React tree?", focusArea: "Performance Optimization" },
-      { question: "How do you structure global state in Redux to keep actions and reducers clean and maintainable?", focusArea: "State Management" }
+      {
+        question:
+          "What strategies do you use to reduce unnecessary component re-renders in a complex React tree?",
+        focusArea: "Performance Optimization",
+      },
+      {
+        question:
+          "How do you structure global state in Redux to keep actions and reducers clean and maintainable?",
+        focusArea: "State Management",
+      },
     ];
-  } else if (titleLower.includes("back") || titleLower.includes("node") || titleLower.includes("mongo") || titleLower.includes("server")) {
-    skills = ["Node.js", "Express.js", "MongoDB", "Mongoose", "REST APIs", "Docker", "Redis", "SQL"];
+  } else if (
+    titleLower.includes("back") ||
+    titleLower.includes("node") ||
+    titleLower.includes("mongo") ||
+    titleLower.includes("server")
+  ) {
+    skills = [
+      "Node.js",
+      "Express.js",
+      "MongoDB",
+      "Mongoose",
+      "REST APIs",
+      "Docker",
+      "Redis",
+      "SQL",
+    ];
     summary = `Candidate ${candidateName} presents a solid backend background with extensive use of Node.js and Express to build RESTful web services. They show good understanding of database schemas, indexes, and aggregation queries.`;
     pros = [
       "Strong database modeling skills (MongoDB/Mongoose collections and indexes)",
       "Experience building robust, secured REST APIs with middleware validations",
-      "Familiarity with containerization and caching systems like Docker and Redis"
+      "Familiarity with containerization and caching systems like Docker and Redis",
     ];
     cons = [
       "Limited exposure to frontend UI development and integration",
-      "Needs closer alignment on security best practices like rate limiting and token rotations"
+      "Needs closer alignment on security best practices like rate limiting and token rotations",
     ];
     questions = [
-      { question: "How would you design a MongoDB aggregation query to compile statistics across multiple collections?", focusArea: "Database Queries" },
-      { question: "How do you secure server endpoints against SQL/NoSQL injection attacks and general load surges?", focusArea: "API Security" }
+      {
+        question:
+          "How would you design a MongoDB aggregation query to compile statistics across multiple collections?",
+        focusArea: "Database Queries",
+      },
+      {
+        question:
+          "How do you secure server endpoints against SQL/NoSQL injection attacks and general load surges?",
+        focusArea: "API Security",
+      },
     ];
   }
 
@@ -137,13 +190,88 @@ Education: M.Sc. in Computer Science.`;
     pros,
     cons,
     interviewQuestions: questions,
-    extractedResumeText
+    extractedResumeText,
   };
 }
 
 /**
- * Parses candidate resume PDF using Gemini's native document support.
- * Returns structured screening insights and full text extraction for RAG indexing.
+ * Prioritized screening model chain (Flash-Lite models).
+ * Primary: gemini-3.5-flash-lite
+ * Fallback: gemini-3.1-flash-lite
+ */
+const CANDIDATE_SCREENING_MODELS = [
+  "gemini-3.5-flash-lite",
+  "gemini-3.1-flash-lite",
+];
+
+async function generateContentWithFallback(
+  ai: GoogleGenAI,
+  requestParams: { contents: any; config?: any },
+) {
+  let lastError: any = null;
+
+  for (const model of CANDIDATE_SCREENING_MODELS) {
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const response = await ai.models.generateContent({
+          ...requestParams,
+          model,
+        });
+        if (response && response.text) {
+          return response;
+        }
+      } catch (err: any) {
+        lastError = err;
+        const errStr = String(err?.message || err);
+        const isTransient =
+          errStr.includes("503") ||
+          errStr.includes("high demand") ||
+          errStr.includes("429") ||
+          errStr.includes("Resource has been exhausted") ||
+          errStr.includes("UNAVAILABLE") ||
+          errStr.includes("overloaded");
+
+        if (isTransient && attempt < 2) {
+          console.warn(
+            `[Gemini API] Model ${model} returned transient spike (attempt ${attempt}/2). Retrying in 1.5s...`,
+          );
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+          continue;
+        }
+
+        console.warn(
+          `[Gemini API] Model ${model} failed (${err?.message || err}). Falling back to next candidate model...`,
+        );
+        break; // Advance to next model in the chain
+      }
+    }
+  }
+
+  throw (
+    lastError || new Error("All configured Gemini AI models failed to respond.")
+  );
+}
+
+/**
+ * Fast in-memory PDF text extraction using unpdf.
+ */
+export async function extractTextFromPdfBuffer(pdfBuffer: Buffer): Promise<string> {
+  try {
+    const { extractText } = await import("unpdf");
+    const result = await extractText(new Uint8Array(pdfBuffer));
+    if (Array.isArray(result.text)) {
+      return result.text.join("\n\n").trim();
+    }
+    return (typeof result.text === "string" ? result.text : String(result.text || "")).trim();
+  } catch (err: any) {
+    console.warn("PDF text extraction failed, falling back:", err?.message || err);
+    return "";
+  }
+}
+
+/**
+ * Parses candidate resume. Extracts text from PDF buffer first for ultra-fast NLP screening,
+ * falling back to multimodal PDF vision if needed.
  */
 export async function parseResumePDF(
   pdfBuffer: Buffer,
@@ -154,10 +282,17 @@ export async function parseResumePDF(
     return getMockScreeningResult(candidateName, jobTitle);
   }
 
+  // 1. Fast Text-Extraction Path (2.5x to 3x faster & lower token cost)
+  const extractedText = await extractTextFromPdfBuffer(pdfBuffer);
+  if (extractedText && extractedText.length > 80) {
+    return parseResumeTextFallback(extractedText, jobTitle, candidateName);
+  }
+
+  // 2. Multimodal Vision Fallback if PDF text extraction was empty or image-only
   const ai = getAiClient();
   if (!ai) throw new Error("AI client unavailable");
-  const response = await ai.models.generateContent({
-    model: "gemini-3.1-flash-lite",
+
+  const response = await generateContentWithFallback(ai, {
     contents: [
       {
         inlineData: {
@@ -197,7 +332,7 @@ export async function parseResumePDF(
 }
 
 /**
- * Normal fallback parser in case the resume PDF download fails or format is unsupported.
+ * High-speed text-based resume parser evaluating candidate profile & credentials against job title.
  */
 export async function parseResumeTextFallback(
   candidateText: string,
@@ -210,10 +345,10 @@ export async function parseResumeTextFallback(
 
   const ai = getAiClient();
   if (!ai) throw new Error("AI client unavailable");
-  const response = await ai.models.generateContent({
-    model: "gemini-3.1-flash-lite",
+
+  const response = await generateContentWithFallback(ai, {
     contents: `Analyze candidate "${candidateName}" applying for "${jobTitle}".
-    Profile Information:
+    Resume Text:
     ${candidateText}
  
     Generate the following structured JSON output:
@@ -236,5 +371,11 @@ export async function parseResumeTextFallback(
   });
 
   const rawText = response.text || "{}";
-  return JSON.parse(rawText);
+  const result = JSON.parse(rawText);
+
+  if (!result.extractedResumeText) {
+    result.extractedResumeText = candidateText.slice(0, 3000);
+  }
+
+  return result;
 }

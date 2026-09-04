@@ -36,10 +36,11 @@ export function RouteGate({ children }: { children: React.ReactNode }) {
     publicRoutes.includes(pathname) ||
     pathname === "/jobs" ||
     pathname.startsWith("/jobs/") ||
+    pathname.startsWith("/offer/") ||
     isCompanyJobs ||
     isJobApplication;
 
-  // Mount useEffect to restore session from localStorage
+  // Mount useEffect to restore session from localStorage instantly
   React.useEffect(() => {
     if (typeof window !== "undefined") {
       const savedUser = localStorage.getItem("org_control_user");
@@ -68,8 +69,12 @@ export function RouteGate({ children }: { children: React.ReactNode }) {
       } else {
         const allowedRoutes = [
           "/dashboard",
-          "/features/hr_recruitment",
-          "/features/candidates_pool",
+          "/employees",
+          "/recruitment",
+          "/recruitment/postings",
+          "/recruitment/postings/new",
+          "/recruitment/rag-search",
+          "/candidates-pool",
           "/register",
           "/auth/org",
           "/auth/admin",
@@ -78,6 +83,8 @@ export function RouteGate({ children }: { children: React.ReactNode }) {
         ];
         const isAllowed =
           allowedRoutes.includes(pathname) ||
+          pathname.startsWith("/employees") ||
+          pathname.startsWith("/recruitment") ||
           isCompanyJobs ||
           isJobApplication ||
           pathname === "/jobs" ||
@@ -116,10 +123,14 @@ export function RouteGate({ children }: { children: React.ReactNode }) {
   }
 
   // Render guard to prevent flash of restricted content while client redirect is in progress
-  const allowedRoutes = [
+  const allowedRoutesRender = [
     "/dashboard",
-    "/features/hr_recruitment",
-    "/features/candidates_pool",
+    "/employees",
+    "/recruitment",
+    "/recruitment/postings",
+    "/recruitment/postings/new",
+    "/recruitment/rag-search",
+    "/candidates-pool",
     "/register",
     "/auth/org",
     "/auth/admin",
@@ -127,7 +138,9 @@ export function RouteGate({ children }: { children: React.ReactNode }) {
     "/dashboard/profile",
   ];
   const isAllowedForAuth =
-    allowedRoutes.includes(pathname) ||
+    allowedRoutesRender.includes(pathname) ||
+    pathname.startsWith("/employees") ||
+    pathname.startsWith("/recruitment") ||
     isCompanyJobs ||
     isJobApplication ||
     pathname === "/jobs" ||

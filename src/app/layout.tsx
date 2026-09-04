@@ -64,7 +64,7 @@ export default function RootLayout({
             <RouteGate>{children}</RouteGate>
           </LayoutWrapper>
         </UnifiedProviders>
-        <Toaster position="bottom-right" />
+        <Toaster position="top-right" />
       </body>
     </html>
   );

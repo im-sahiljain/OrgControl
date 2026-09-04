@@ -30,7 +30,7 @@ export async function POST(req: Request) {
       }
     }
 
-    const { name, email, phone, jobTitle, resumeUrl } = await req.json();
+    const { name, email, phone, jobTitle, resumeUrl, resumeText } = await req.json();
 
     if (!name || !email || !jobTitle) {
       return NextResponse.json(
@@ -39,44 +39,56 @@ export async function POST(req: Request) {
       );
     }
 
+    // Fast-path: If pre-extracted resumeText is provided, parse directly without downloading PDF
+    if (resumeText && typeof resumeText === "string" && resumeText.trim().length > 50) {
+      try {
+        const aiResult = await parseResumeTextFallback(resumeText.trim(), jobTitle, name);
+        return NextResponse.json({ success: true, data: aiResult });
+      } catch (textErr: any) {
+        console.warn("Fast text parse failed, falling back to PDF download:", textErr?.message);
+      }
+    }
+
     let pdfBuffer: Buffer | null = null;
 
-    // Skip PDF download if we are bypassing the live parser
-    if (resumeUrl && !forceMockParsing) {
+    if (resumeUrl) {
       try {
         console.log(`Downloading resume PDF from Cloudinary: ${resumeUrl}`);
         const response = await axios.get(resumeUrl, {
           responseType: "arraybuffer",
-          timeout: 8000, // 8-second download timeout
+          timeout: 15000,
         });
         pdfBuffer = Buffer.from(response.data);
       } catch (downloadErr: any) {
-        console.warn(
-          `Failed to download resume from url "${resumeUrl}". Falling back to text-based evaluation.`,
-          downloadErr.message
+        console.error(`Failed to download resume from url "${resumeUrl}":`, downloadErr.message);
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Failed to download resume PDF: ${downloadErr.message}`,
+          },
+          { status: 400 }
         );
       }
     }
 
-    try {
-      let aiResult;
-      if (forceMockParsing) {
-        console.log(`[RAG Ingestion] Bypassing live Gemini API because user is not logged in. Using mock screening result.`);
-        aiResult = getMockScreeningResult(name, jobTitle);
-      } else if (pdfBuffer) {
-        aiResult = await parseResumePDF(pdfBuffer, jobTitle, name);
-      } else {
-        const candidateInfoText = `Name: ${name}\nEmail: ${email}\nPhone: ${phone || "N/A"}\nJob: ${jobTitle}`;
-        aiResult = await parseResumeTextFallback(candidateInfoText, jobTitle, name);
-      }
+    if (!pdfBuffer) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "No resume PDF provided or found.",
+        },
+        { status: 400 }
+      );
+    }
 
-      console.log("AI screening result:", aiResult);
+    try {
+      const aiResult = await parseResumePDF(pdfBuffer, jobTitle, name);
       return NextResponse.json({ success: true, data: aiResult });
     } catch (err: any) {
       console.error("Gemini API call failed:", err);
       return NextResponse.json(
-        { success: false, error: `Gemini API call failed: ${err.message}` },
-        { status: 550 }
+        { success: false, error: `Gemini parsing failed: ${err.message}` },
+        { status: 502 }
       );
     }
   } catch (error: any) {

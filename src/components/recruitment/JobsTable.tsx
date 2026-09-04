@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -143,14 +144,16 @@ export const JobsTable: React.FC<JobsTableProps> = ({
   const displayedJobs = paginatedData?.data || [];
   const pagination = paginatedData?.pagination || { total: 0, pages: 1 };
 
+  const safeJobs = Array.isArray(jobs) ? jobs : [];
+
   const jobTypes = useMemo(
     () =>
-      Array.from(new Set(jobs.map((job) => job.type).filter(Boolean))).sort(),
-    [jobs],
+      Array.from(new Set(safeJobs.map((job) => job.type).filter(Boolean))).sort(),
+    [safeJobs],
   );
 
   const sortedJobs = useMemo(() => {
-    return [...jobs].sort((a, b) => {
+    return [...safeJobs].sort((a, b) => {
       if (!sortColumn || !sortDirection) {
         return 0;
       }
@@ -169,7 +172,7 @@ export const JobsTable: React.FC<JobsTableProps> = ({
 
       return sortDirection === "asc" ? result : -result;
     });
-  }, [jobs, sortColumn, sortDirection]);
+  }, [safeJobs, sortColumn, sortDirection]);
 
   const pageCount = pagination.pages || 1;
   const currentPage = page;
@@ -202,6 +205,8 @@ export const JobsTable: React.FC<JobsTableProps> = ({
       <ArrowDown className="size-4 text-zinc-700" />
     );
   };
+
+  const router = useRouter();
 
   return (
     <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm bg-white dark:bg-zinc-950">
@@ -337,7 +342,11 @@ export const JobsTable: React.FC<JobsTableProps> = ({
             </TableRow>
           ) : sortedJobs.length > 0 ? (
             paginatedJobs.map((job: any, index: number) => (
-              <TableRow key={job._id}>
+              <TableRow
+                key={job._id}
+                onClick={() => router.push(`/recruitment/postings/${job._id}/analytics`)}
+                className="cursor-pointer hover:bg-zinc-50/80 dark:hover:bg-zinc-900/60 transition-colors"
+              >
                 <TableCell className="text-center font-semibold text-zinc-400 dark:text-zinc-500">
                   {currentPage * rowsPerPage + index + 1}
                 </TableCell>
@@ -375,7 +384,7 @@ export const JobsTable: React.FC<JobsTableProps> = ({
                 <TableCell className="text-center font-semibold text-zinc-700 dark:text-zinc-300">
                   {job.applicantCount ?? 0}
                 </TableCell>
-                <TableCell>
+                <TableCell onClick={(e) => e.stopPropagation()}>
                   <Link
                     href={`/${orgId}/${job._id}/application`}
                     target="_blank"
@@ -384,7 +393,7 @@ export const JobsTable: React.FC<JobsTableProps> = ({
                     Apply Portal <ArrowRight className="h-3 w-3" />
                   </Link>
                 </TableCell>
-                <TableCell className="text-center">
+                <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                   <div className="inline-flex flex-wrap justify-end gap-2">
                     {/* <Button
                       variant="outline"
@@ -434,6 +443,11 @@ export const JobsTable: React.FC<JobsTableProps> = ({
                           }}
                         >
                           View Pipeline
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href={`/recruitment/postings/${job._id}/analytics`} className="cursor-pointer font-bold text-blue-600 dark:text-blue-400">
+                            View Detailed Analytics
+                          </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleEditClick(job)}>
                           Edit

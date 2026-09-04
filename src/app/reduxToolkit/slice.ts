@@ -24,6 +24,17 @@ export interface UserSession {
   isSandbox?: boolean;
 }
 
+export interface CandidateQueueItem {
+  _id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  jobId: string;
+  resumeUrl?: string;
+  resumeText?: string;
+  stage?: string;
+}
+
 export interface EmployeeUIState {
   selectedEmployee: Employee | null;
   isDetailsOpen: boolean;
@@ -33,6 +44,15 @@ export interface EmployeeUIState {
   // Authentication parameters
   isAuthenticated: boolean;
   user: UserSession | null;
+
+  // Global AI Batch Screening Queue state
+  isBatchScreening: boolean;
+  batchQueue: CandidateQueueItem[];
+  batchTotal: number;
+  batchProgress: number;
+  batchCurrentName: string;
+  batchJobId: string | null;
+  cancelRequested: boolean;
 }
 
 export const initialUIState: EmployeeUIState = {
@@ -41,9 +61,18 @@ export const initialUIState: EmployeeUIState = {
   searchFilter: "",
   isSidebarCollapsed: false,
   
-  // Default to unauthenticated — users must select a profile on the login page
+  // Default to unauthenticated — users session hydrates on client mount
   isAuthenticated: false,
   user: null,
+
+  // AI Screening Defaults
+  isBatchScreening: false,
+  batchQueue: [],
+  batchTotal: 0,
+  batchProgress: 0,
+  batchCurrentName: "",
+  batchJobId: null,
+  cancelRequested: false,
 };
 
 export const employeeUISlice = createSlice({
@@ -73,8 +102,14 @@ export const employeeUISlice = createSlice({
     logoutUser: (state) => {
       state.isAuthenticated = false;
       state.user = null;
+      state.isBatchScreening = false;
+      state.batchQueue = [];
+      state.batchCurrentName = "";
+      state.batchJobId = null;
+      state.cancelRequested = true;
       if (typeof window !== "undefined") {
         localStorage.removeItem("org_control_user");
+        localStorage.removeItem("org_control_screening_state");
       }
     },
     setAuthSession: (state, action: PayloadAction<UserSession>) => {
@@ -96,6 +131,66 @@ export const employeeUISlice = createSlice({
         localStorage.setItem("sidebar_collapsed", String(action.payload));
       }
     },
+
+    // Global AI Screening Actions
+    startGlobalScreening: (
+      state,
+      action: PayloadAction<{
+        candidates: CandidateQueueItem[];
+        jobId: string | null;
+        total?: number;
+        initialProgress?: number;
+      }>
+    ) => {
+      state.isBatchScreening = true;
+      state.batchQueue = action.payload.candidates;
+      state.batchTotal =
+        action.payload.total !== undefined
+          ? action.payload.total
+          : action.payload.candidates.length;
+      state.batchProgress =
+        action.payload.initialProgress !== undefined
+          ? action.payload.initialProgress
+          : 0;
+      state.batchCurrentName = action.payload.candidates[0]?.name || "";
+      state.batchJobId = action.payload.jobId;
+      state.cancelRequested = false;
+    },
+    updateGlobalScreeningProgress: (
+      state,
+      action: PayloadAction<{ progress: number; currentName: string }>
+    ) => {
+      state.batchProgress = action.payload.progress;
+      state.batchCurrentName = action.payload.currentName;
+    },
+    setSyncedScreeningState: (
+      state,
+      action: PayloadAction<{
+        isBatchScreening: boolean;
+        batchTotal: number;
+        batchProgress: number;
+        batchCurrentName: string;
+        batchJobId: string | null;
+      }>
+    ) => {
+      state.isBatchScreening = action.payload.isBatchScreening;
+      state.batchTotal = action.payload.batchTotal;
+      state.batchProgress = action.payload.batchProgress;
+      state.batchCurrentName = action.payload.batchCurrentName;
+      state.batchJobId = action.payload.batchJobId;
+      if (!action.payload.isBatchScreening) {
+        state.batchQueue = [];
+      }
+    },
+    requestCancelGlobalScreening: (state) => {
+      state.cancelRequested = true;
+    },
+    stopOrFinishGlobalScreening: (state) => {
+      state.isBatchScreening = false;
+      state.batchQueue = [];
+      state.batchCurrentName = "";
+      state.cancelRequested = false;
+    },
   },
 });
 
@@ -108,7 +203,13 @@ export const {
   setAuthSession,
   toggleSidebar,
   setSidebarCollapsed,
+  startGlobalScreening,
+  updateGlobalScreeningProgress,
+  setSyncedScreeningState,
+  requestCancelGlobalScreening,
+  stopOrFinishGlobalScreening,
 } = employeeUISlice.actions;
 
 export const employeeUIReducer = employeeUISlice.reducer;
 export default employeeUISlice.reducer;
+
