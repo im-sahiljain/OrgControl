@@ -110,9 +110,9 @@ const CandidateDetailsModal = ({
   jobs?: any[];
 }) => {
   return (
-    <div className="fixed inset-0 z-[100] overflow-y-auto bg-black/60 backdrop-blur-sm p-4 flex items-center justify-center">
-      <div className="relative mx-auto max-w-4xl rounded-3xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden">
-        <div className="flex items-start justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/80 p-6">
+    <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm p-4 sm:p-6 flex items-center justify-center">
+      <div className="relative mx-auto w-full max-w-5xl max-h-[90vh] flex flex-col rounded-3xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden">
+        <div className="flex items-start justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/80 p-5 sm:p-6 shrink-0">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">
               Candidate profile
@@ -133,7 +133,7 @@ const CandidateDetailsModal = ({
         </div>
 
         {loading ? (
-          <div className="space-y-4 p-6">
+          <div className="flex-1 overflow-y-auto space-y-4 p-5 sm:p-6">
             <div className="h-5 w-48 rounded-full bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="h-24 rounded-3xl bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
@@ -147,7 +147,7 @@ const CandidateDetailsModal = ({
             <div className="h-40 rounded-3xl bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
           </div>
         ) : (
-          <div className="grid gap-6 p-6 lg:grid-cols-[1fr_320px]">
+          <div className="flex-1 overflow-y-auto p-5 sm:p-6 grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
             <div className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/80 p-4">
@@ -174,8 +174,8 @@ const CandidateDetailsModal = ({
                   <Sparkles className="h-4 w-4 text-violet-600" />
                   Candidate summary
                 </div>
-                <p className="mt-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300 min-h-[6rem]">
-                  {candidate.summary || "No candidate summary available."}
+                <p className="mt-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300 min-h-[4rem]">
+                  {candidate?.summary || "No candidate summary available."}
                 </p>
               </div>
 
@@ -185,10 +185,10 @@ const CandidateDetailsModal = ({
                     Strengths
                   </div>
                   <ul className="space-y-2 text-sm text-zinc-600 dark:text-zinc-300">
-                    {candidate.pros?.length ? (
+                    {candidate?.pros?.length ? (
                       candidate.pros.map((pro: string, idx: number) => (
                         <li key={idx} className="flex gap-2 items-start">
-                          <span className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                          <span className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
                           <span>{pro}</span>
                         </li>
                       ))
@@ -204,10 +204,10 @@ const CandidateDetailsModal = ({
                     Opportunities
                   </div>
                   <ul className="space-y-2 text-sm text-zinc-600 dark:text-zinc-300">
-                    {candidate.cons?.length ? (
+                    {candidate?.cons?.length ? (
                       candidate.cons.map((con: string, idx: number) => (
                         <li key={idx} className="flex gap-2 items-start">
-                          <span className="mt-1 h-1.5 w-1.5 rounded-full bg-amber-500" />
+                          <span className="mt-1 h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />
                           <span>{con}</span>
                         </li>
                       ))
@@ -224,7 +224,7 @@ const CandidateDetailsModal = ({
                   Interview questions
                 </div>
                 <div className="mt-4 space-y-3 text-sm text-zinc-600 dark:text-zinc-300">
-                  {candidate.interviewQuestions?.length ? (
+                  {candidate?.interviewQuestions?.length ? (
                     candidate.interviewQuestions.map(
                       (question: any, index: number) => (
                         <div
@@ -249,14 +249,14 @@ const CandidateDetailsModal = ({
               </div>
             </div>
 
-            <aside className="space-y-4 rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/80 p-5 text-sm text-zinc-600 dark:text-zinc-300">
+            <aside className="space-y-4 rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/80 p-5 text-sm text-zinc-600 dark:text-zinc-300 h-fit">
               <div className="space-y-2">
                 <p className="text-xs uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">
                   Job reference
                 </p>
                 <p>
-                  {jobs.find((j: any) => j._id === candidate.jobId)?.title ||
-                    candidate.jobId ||
+                  {jobs.find((j: any) => j._id === candidate?.jobId)?.title ||
+                    candidate?.jobId ||
                     "Not assigned"}
                 </p>
               </div>
@@ -265,7 +265,7 @@ const CandidateDetailsModal = ({
                   Skills
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {candidate.skills?.length ? (
+                  {candidate?.skills?.length ? (
                     candidate.skills.map((skill: string) => (
                       <span
                         key={skill}
@@ -285,7 +285,7 @@ const CandidateDetailsModal = ({
                 <p className="text-xs uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">
                   Resume
                 </p>
-                {candidate.resumeUrl ? (
+                {candidate?.resumeUrl ? (
                   <a
                     href={candidate.resumeUrl}
                     target="_blank"
@@ -303,7 +303,7 @@ const CandidateDetailsModal = ({
                   AI screening status
                 </p>
                 <div className="mt-2 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                  {candidate.isAiScreened ? "Completed" : "Pending"}
+                  {candidate?.isAiScreened ? "Completed" : "Pending"}
                 </div>
               </div>
             </aside>
