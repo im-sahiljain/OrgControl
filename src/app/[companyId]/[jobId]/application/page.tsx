@@ -141,7 +141,7 @@ export default function JobDetailPage() {
         email,
         phone,
         resumeUrl: uploadedUrl,
-        stage: "applied",
+        stage: aiInsights.isAiScreened ? "screened" : "applied",
         isAiScreened: aiInsights.isAiScreened,
         matchScore: aiInsights.matchScore,
         skills: aiInsights.skills,

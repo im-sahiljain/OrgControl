@@ -148,7 +148,9 @@ export const JobsTable: React.FC<JobsTableProps> = ({
 
   const jobTypes = useMemo(
     () =>
-      Array.from(new Set(safeJobs.map((job) => job.type).filter(Boolean))).sort(),
+      Array.from(
+        new Set(safeJobs.map((job) => job.type).filter(Boolean)),
+      ).sort(),
     [safeJobs],
   );
 
@@ -344,7 +346,9 @@ export const JobsTable: React.FC<JobsTableProps> = ({
             paginatedJobs.map((job: any, index: number) => (
               <TableRow
                 key={job._id}
-                onClick={() => router.push(`/recruitment/postings/${job._id}/analytics`)}
+                onClick={() =>
+                  router.push(`/recruitment/postings/${job._id}/analytics`)
+                }
                 className="cursor-pointer hover:bg-zinc-50/80 dark:hover:bg-zinc-900/60 transition-colors"
               >
                 <TableCell className="text-center font-semibold text-zinc-400 dark:text-zinc-500">
@@ -375,7 +379,7 @@ export const JobsTable: React.FC<JobsTableProps> = ({
                     className={`inline-flex items-center rounded-full px-2 py-1 text-[11px] font-semibold ${
                       job.status === "active"
                         ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50"
-                        : "bg-zinc-100 text-zinc-800 dark:bg-zinc-950/30 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-900/50"
+                        : "bg-red-100 text-red-800 dark:bg-red-950/30 dark:text-red-400 border border-red-200 dark:border-red-900/50"
                     }`}
                   >
                     {job.status === "active" ? "Active" : "Inactive"}
@@ -393,7 +397,10 @@ export const JobsTable: React.FC<JobsTableProps> = ({
                     Apply Portal <ArrowRight className="h-3 w-3" />
                   </Link>
                 </TableCell>
-                <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                <TableCell
+                  className="text-center"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <div className="inline-flex flex-wrap justify-end gap-2">
                     {/* <Button
                       variant="outline"
@@ -445,7 +452,10 @@ export const JobsTable: React.FC<JobsTableProps> = ({
                           View Pipeline
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                          <Link href={`/recruitment/postings/${job._id}/analytics`} className="cursor-pointer font-bold text-blue-600 dark:text-blue-400">
+                          <Link
+                            href={`/recruitment/postings/${job._id}/analytics`}
+                            className="cursor-pointer font-bold text-blue-600 dark:text-blue-400"
+                          >
                             View Detailed Analytics
                           </Link>
                         </DropdownMenuItem>

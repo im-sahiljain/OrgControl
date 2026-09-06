@@ -3,6 +3,7 @@ import dbConnect from "@/lib/dbConnect";
 import Organization from "@/models/Organization";
 import Employee from "@/models/Employee";
 import Department from "@/models/Department";
+import { signToken } from "@/lib/jwt";
 
 export async function POST(req: Request) {
   try {
@@ -65,12 +66,34 @@ export async function POST(req: Request) {
       status: "active",
     });
 
-    return NextResponse.json({
+    // 4. Sign Auth Token for the new Admin
+    const tokenPayload = {
+      id: adminUser._id.toString(),
+      name: adminUser.empName,
+      email: adminUser.email,
+      role: "org_admin" as const,
+      orgId: orgId.toString(),
+      department: adminUser.department,
+      position: adminUser.empPosition,
+    };
+    const token = signToken(tokenPayload);
+
+    const response = NextResponse.json({
       success: true,
       message: "Organization provisioned successfully.",
       orgId: orgId.toString(),
       adminId: adminUser._id.toString(),
     });
+
+    response.cookies.set("org_control_token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24, // 1 day
+      path: "/",
+    });
+
+    return response;
   } catch (error: any) {
     console.error("Organization Registration Error:", error);
     return NextResponse.json(
@@ -79,3 +102,4 @@ export async function POST(req: Request) {
     );
   }
 }
+

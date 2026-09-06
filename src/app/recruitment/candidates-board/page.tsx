@@ -9,13 +9,14 @@ import {
 } from "@tanstack/react-query";
 import { useSelector, useDispatch } from "react-redux";
 import axios from "axios";
-import { Users, AlertCircle, Sparkles } from "lucide-react";
+import { Users, AlertCircle, Sparkles, RefreshCw } from "lucide-react";
 import type { RootState } from "@/app/reduxToolkit/store";
 import { startGlobalScreening } from "@/app/reduxToolkit/slice";
 import toast from "react-hot-toast";
 import { DragDropManager, PointerSensor } from "@dnd-kit/dom";
 import { CandidateBoard } from "@/components/recruitment/CandidateBoard";
 import { CandidateDetailsDrawer } from "@/components/recruitment/CandidateDetailsDrawer";
+import { BoardAnalyticsCharts } from "@/components/recruitment/BoardAnalyticsCharts";
 import { Button } from "@/components/ui/button";
 
 const PIPELINE_STAGES = [
@@ -41,13 +42,13 @@ const PIPELINE_STAGES = [
     id: "offered",
     name: "Offered",
     color:
-      "bg-emerald-500/10 text-emerald-600 border-emerald-200 dark:border-emerald-900/50",
+      "bg-cyan-500/10 text-cyan-600 border-cyan-200 dark:border-cyan-900/50",
   },
   {
     id: "hired",
     name: "Hired",
     color:
-      "bg-teal-500/10 text-teal-600 border-teal-200 dark:border-teal-900/50",
+      "bg-emerald-500/10 text-emerald-600 border-emerald-200 dark:border-emerald-900/50",
   },
   {
     id: "rejected",
@@ -448,6 +449,26 @@ export default function CandidatesBoardPage() {
     stageHiredQuery.isLoading ||
     stageRejectedQuery.isLoading;
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefreshBoard = async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["recruitment-candidates"] }),
+        queryClient.invalidateQueries({ queryKey: ["job-candidates"] }),
+        queryClient.invalidateQueries({ queryKey: ["candidatesPool"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard-metrics"] }),
+        queryClient.invalidateQueries({ queryKey: ["unscreened-candidates"] }),
+      ]);
+      toast.success("Candidates board refreshed.");
+    } catch {
+      toast.error("Failed to refresh board.");
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-5">
@@ -461,18 +482,31 @@ export default function CandidatesBoardPage() {
           </p>
         </div>
 
-        {selectedJobId && selectedJobId !== "all" && (
+        <div className="flex items-center gap-2.5 flex-wrap self-start sm:self-auto">
           <Button
             variant="outline"
             size="sm"
-            className="h-9 px-3.5 text-xs font-bold gap-2 flex items-center bg-violet-50 hover:bg-violet-100 dark:bg-violet-950/40 text-violet-700 hover:text-violet-800 dark:text-violet-300 border-violet-200 dark:border-violet-800/80 shadow-xs cursor-pointer shrink-0 self-start sm:self-auto rounded-xl"
-            onClick={handleBatchScreen}
-            disabled={isBatchScreening}
+            className="h-9 px-3.5 text-xs font-bold gap-2 flex items-center bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 shadow-xs cursor-pointer rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-800"
+            onClick={handleRefreshBoard}
+            disabled={isRefreshing || loadingCandidates}
           >
-            <Sparkles className="h-4 w-4 text-violet-600 dark:text-violet-400 animate-pulse" />
-            {isBatchScreening ? "AI Screening in Progress..." : "Run Gemini AI Screening"}
+            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin text-blue-600" : ""}`} />
+            {isRefreshing ? "Refreshing..." : "Refresh Board"}
           </Button>
-        )}
+
+          {selectedJobId && selectedJobId !== "all" && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 px-3.5 text-xs font-bold gap-2 flex items-center bg-violet-50 hover:bg-violet-100 dark:bg-violet-950/40 text-violet-700 hover:text-violet-800 dark:text-violet-300 border-violet-200 dark:border-violet-800/80 shadow-xs cursor-pointer shrink-0 rounded-xl"
+              onClick={handleBatchScreen}
+              disabled={isBatchScreening}
+            >
+              <Sparkles className="h-4 w-4 text-violet-600 dark:text-violet-400 animate-pulse" />
+              {isBatchScreening ? "AI Screening in Progress..." : "Run Gemini AI Screening"}
+            </Button>
+          )}
+        </div>
       </div>
 
       <CandidateBoard
@@ -500,6 +534,12 @@ export default function CandidatesBoardPage() {
         screenedCandidates={screenedCandidates}
         unscreenedCandidates={unscreenedCandidates}
         loadingJobCandidates={loadingJobCandidates}
+      />
+
+      <BoardAnalyticsCharts
+        orgId={orgId || ""}
+        selectedJobId={selectedJobId}
+        isBatchScreening={isBatchScreening}
       />
 
       <CandidateDetailsDrawer

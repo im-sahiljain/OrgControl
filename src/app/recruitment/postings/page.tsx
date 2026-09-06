@@ -44,6 +44,9 @@ export default function RecruitmentPostingsPage() {
     onSuccess: () => {
       toast.success("Job posting updated successfully!");
       queryClient.invalidateQueries({ queryKey: ["recruitment-jobs"] });
+      queryClient.invalidateQueries({ queryKey: ["jobsPool"] });
+      queryClient.invalidateQueries({ queryKey: ["job-candidates"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-all-jobs"] });
       setEditingJob(null);
       setTogglingJob(null);
     },

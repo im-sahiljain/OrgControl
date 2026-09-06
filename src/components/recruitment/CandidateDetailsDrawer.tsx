@@ -26,6 +26,53 @@ interface CandidateDetailsDrawerProps {
   moveCandidate: (candidateId: string, newStage: string) => void;
 }
 
+function MatchScoreProgressCircle({ score }: { score: number }) {
+  const radius = 18;
+  const circumference = 2 * Math.PI * radius;
+  const validScore = Math.min(100, Math.max(0, score || 0));
+  const strokeDashoffset = circumference - (validScore / 100) * circumference;
+
+  const color =
+    validScore >= 90
+      ? { stroke: "#10b981", text: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-950/30" }
+      : validScore >= 75
+      ? { stroke: "#06b6d4", text: "text-cyan-600 dark:text-cyan-400", bg: "bg-cyan-50 dark:bg-cyan-950/30" }
+      : validScore >= 60
+      ? { stroke: "#f59e0b", text: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-950/30" }
+      : { stroke: "#f43f5e", text: "text-rose-600 dark:text-rose-400", bg: "bg-rose-50 dark:bg-rose-950/30" };
+
+  return (
+    <div className={`relative h-12 w-12 rounded-full flex items-center justify-center shrink-0 ${color.bg}`}>
+      <svg className="h-12 w-12 -rotate-90 transform" viewBox="0 0 44 44">
+        <circle
+          cx="22"
+          cy="22"
+          r={radius}
+          stroke="currentColor"
+          strokeWidth="3.5"
+          className="text-zinc-200 dark:text-zinc-800"
+          fill="transparent"
+        />
+        <circle
+          cx="22"
+          cy="22"
+          r={radius}
+          stroke={color.stroke}
+          strokeWidth="3.5"
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          strokeLinecap="round"
+          fill="transparent"
+          className="transition-all duration-500 ease-out"
+        />
+      </svg>
+      <span className={`absolute font-black text-xs ${color.text}`}>
+        {validScore}%
+      </span>
+    </div>
+  );
+}
+
 export const CandidateDetailsDrawer: React.FC<CandidateDetailsDrawerProps> = ({
   selectedCandidateId,
   setSelectedCandidateId,
@@ -44,8 +91,8 @@ export const CandidateDetailsDrawer: React.FC<CandidateDetailsDrawerProps> = ({
     applied: "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-950 dark:text-blue-300",
     screening: "bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-950 dark:text-purple-300",
     interview: "bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-950 dark:text-indigo-300",
-    offered: "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950 dark:text-amber-300",
-    hired: "bg-teal-100 text-teal-800 border-teal-200 dark:bg-teal-950 dark:text-teal-300",
+    offered: "bg-cyan-100 text-cyan-800 border-cyan-200 dark:bg-cyan-950 dark:text-cyan-300",
+    hired: "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300",
     rejected: "bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-950 dark:text-rose-300",
   };
 
@@ -118,9 +165,7 @@ export const CandidateDetailsDrawer: React.FC<CandidateDetailsDrawerProps> = ({
               {/* Score & Resume download */}
               <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950/30 border border-zinc-150 dark:border-zinc-850/80 rounded-xl gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-full border-4 border-blue-500/20 flex items-center justify-center font-bold text-sm text-blue-600 dark:text-blue-400 bg-white dark:bg-zinc-900">
-                    {fullCandidate.matchScore}%
-                  </div>
+                  <MatchScoreProgressCircle score={fullCandidate.matchScore || 0} />
                   <div>
                     <h4 className="font-bold text-zinc-800 dark:text-zinc-100">
                       AI Match Score

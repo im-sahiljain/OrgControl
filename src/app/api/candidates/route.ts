@@ -65,9 +65,9 @@ export async function GET(req: Request) {
 
     let candidateQuery = Candidate.find(query)
       .select(
-        "name email phone skills matchScore stage offerStatus offerToken offerDetails onboardedEmployeeId isAiScreened jobId orgId createdAt resumeUrl resumeText summary pros cons interviewQuestions",
+        "name email phone skills matchScore stage offerStatus offerToken offerDetails onboardedEmployeeId isAiScreened jobId orgId createdAt updatedAt resumeUrl resumeText summary pros cons interviewQuestions",
       )
-      .sort({ createdAt: -1 });
+      .sort({ updatedAt: -1, createdAt: -1 });
 
     if (!isAll && limit > 0) {
       candidateQuery = candidateQuery.skip(skip).limit(limit);
