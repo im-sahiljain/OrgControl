@@ -46,3 +46,15 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+---
+
+## 🔒 License & Copyright Notice
+
+**Copyright © 2026 Sahil Jain. All Rights Reserved.**
+
+This repository is publicly visible for portfolio and demonstration purposes only.
+
+- ❌ **No permission** is granted to clone, download, copy, modify, reproduce, or distribute any portion of this codebase.
+- ❌ Commercial or non-commercial use of this code is strictly prohibited.
+- 📩 For licensing inquiries or permission requests, please contact: `mr.sahiljain14@gmail.com`
